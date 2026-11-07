@@ -4,9 +4,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>P.V Group Simulator — Build 09 Optimised</title>
+<title>P.V Group Simulator — Build 10</title>
 <style>
-:root{--glass:rgba(12,20,31,.92);--line:rgba(255,255,255,.18);--gold:#e8bd67;--text:#f4f7fb}
+:root{--glass:rgba(12,20,31,.94);--line:rgba(255,255,255,.18);--gold:#e8bd67;--text:#f4f7fb}
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111;font-family:Segoe UI,Arial,sans-serif;color:var(--text)}
 #game{position:fixed;inset:0}canvas{display:block}
@@ -39,12 +39,9 @@ button:hover,select:hover{border-color:var(--gold)}
 #start h1 span{color:var(--gold)}
 #start p{color:#d0d9e4;line-height:1.6}
 #start button{background:#9d7131;color:#fff;border:0;padding:13px 24px;font-weight:800}
-#footerNote{font-size:11px;color:#aeb9c6;margin-top:12px}
+#footerNote{font-size:11px;color:#aeb9c6;margin-top:12px;line-height:1.6}
 @media(max-width:650px){#status{margin-left:0}#help{max-width:250px;font-size:11px}#topbar{gap:5px}#topbar button,#topbar select{padding:7px;font-size:11px}#brand{font-size:12px}}
 </style>
-<script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}
-</script>
 </head>
 <body>
 <div id="game"></div><div id="crosshair"></div>
@@ -61,7 +58,7 @@ button:hover,select:hover{border-color:var(--gold)}
  </select>
  <button id="travelBtn">Travel</button><button id="carBtn">Enter / Exit Car</button>
  <button id="guardBtn">Security</button><button id="cityBtn">City Owner</button>
- <button id="fullBtn">Full Screen</button><div id="status">Loading city…</div>
+ <button id="fullBtn">Full Screen</button><div id="status">Preparing city…</div>
 </div>
 <div id="help"><b>CONTROLS</b><br>Arrow keys / WASD: move · Mouse drag: look around<br>Shift: run · E / O: interact · F: enter/exit car<br>V: change camera · C: call car · G: travel<br><span style="color:#e8bd67">Walk close to doors, furniture and people to interact.</span></div>
 <div id="prompt"></div><div id="toast"></div><div id="panel"></div>
@@ -70,60 +67,82 @@ button:hover,select:hover{border-color:var(--gold)}
  <h1>Welcome to <span>P.V Group City</span></h1>
  <p>You are the owner of this city and founder of P.V Group. Explore your mansion, organisations and courthouse, meet your staff, manage your properties and travel with your chauffeur and security team.</p>
  <button id="startBtn">ENTER THE CITY</button>
- <div id="footerNote">Optimised Build 09 · Loading the 3D city…</div>
+ <div id="footerNote">Build 10 · Preparing the 3D engine…</div>
 </div></div>
 
-<!-- Entry button works independently of the Three.js module -->
 <script>
 (()=>{
  const start=document.getElementById('start');
  const note=document.getElementById('footerNote');
  const status=document.getElementById('status');
+ let started=false;
  document.getElementById('startBtn').addEventListener('click',()=>{
   if(!window.__pvCityReady){
-   note.textContent='The city is still loading. Please wait a little longer.';
+   note.textContent=window.__pvLoadError||'The city is still being prepared. Please wait for the loading message to finish.';
    return;
   }
-  start.style.display='none';
-  status.textContent='City ready';
+  if(started)return;
+  started=true;start.style.display='none';status.textContent='City ready';
   window.dispatchEvent(new Event('pv-enter-city'));
  });
  window.addEventListener('error',e=>{
   if(!window.__pvCityReady){
-   note.textContent='The 3D engine could not load. Check your internet connection and reload. '+(e.message||'');
+   window.__pvLoadError='Startup error: '+(e.message||'Unknown error')+'. Reload the page and try again.';
+   note.textContent=window.__pvLoadError;
   }
  });
  window.addEventListener('unhandledrejection',e=>{
   if(!window.__pvCityReady){
-   note.textContent='The 3D city could not start. Check your internet connection and reload.';
+   window.__pvLoadError='The city could not start: '+(e.reason?.message||'A loading error occurred')+'.';
+   note.textContent=window.__pvLoadError;
   }
  });
 })();
 </script>
 
 <script type="module">
-import * as THREE from 'three';
+const note=document.getElementById('footerNote');
+const status=document.getElementById('status');
+const setStage=async message=>{
+ note.textContent='Build 10 · '+message;
+ status.textContent=message;
+ await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,35)));
+};
+let THREE;
+try{
+ await setStage('Connecting to the 3D engine…');
+ try{
+  THREE=await import('https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js');
+ }catch(firstError){
+  await setStage('Trying backup 3D engine connection…');
+  THREE=await import('https://unpkg.com/three@0.169.0/build/three.module.js');
+ }
+}catch(error){
+ window.__pvLoadError='Unable to download the 3D engine. The first CDN and backup CDN could not be reached. Check your connection and reload.';
+ note.textContent=window.__pvLoadError;
+ status.textContent='Engine connection failed';
+ throw error;
+}
+
+try{
+await setStage('Creating the city environment…');
 
 const mount=document.getElementById('game');
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9bb9cf);
 scene.fog=new THREE.Fog(0x9bb9cf,150,430);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,700);
-
-/* PERFORMANCE SETTINGS */
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.2));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=false;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.05;
 mount.appendChild(renderer.domElement);
-
 scene.add(new THREE.HemisphereLight(0xe5f3ff,0x65715a,2));
 const sun=new THREE.DirectionalLight(0xffedcf,2.1);
-sun.position.set(-90,150,80);
-scene.add(sun);
+sun.position.set(-90,150,80);scene.add(sun);
 
 const mats={
  grass:new THREE.MeshStandardMaterial({color:0x6b9562}),
@@ -165,7 +184,8 @@ function label(text,x,y,z,color='#ffffff',size=2){
 }
 box(scene,0,-.7,0,430,1,430,mats.grass);
 
-/* CITY ROADS — fewer road markings and street fixtures */
+/* CITY ROADS */
+await setStage('Building roads and intersections…');
 const roadXs=[-150,-90,-30,30,90,150],roadZs=[-150,-90,-30,30,90,150];
 const roadMark=mat(0xe8e0b9),crossMark=mat(0xe7e4d7);
 for(const x of roadXs){
@@ -183,23 +203,22 @@ for(const z of roadZs){
 for(const x of roadXs)for(const z of roadZs){
  for(let i=-2;i<=2;i++)box(scene,x+i*2,.09,z+8,.8,.035,1.6,crossMark);
 }
-/* Fewer lamps, with no costly point light at every pole */
 for(let x=-150;x<=150;x+=60)for(let z=-150;z<=150;z+=60){
  cylinder(scene,x,.2,z,.28,.38,.4,mat(0x777d80));
  box(scene,x,3.1,z,.16,6,.16,mat(0x535b60));
  box(scene,x+.7,5.8,z,.16,.12,1.4,mat(0x30383c));
  box(scene,x+.7,5.55,z,.32,.12,.32,mat(0xffe7b0));
 }
+await setStage('Road network complete · Creating parks and trees…');
 
-/* Trees */
+/* TREES AND PARKS */
 const treeTrunk=mat(0x705035),leafMats=[mat(0x4b8750),mat(0x3d7747)];
 function tree(x,z,s=1){
  const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
  cylinder(g,0,1.6,0,.28,.38,3.2,treeTrunk,8);
  for(let i=0;i<3;i++){
   const crown=new THREE.Mesh(new THREE.SphereGeometry(1.35-i*.15,9,7),leafMats[i%2]);
-  crown.position.set((i-1)*.35,3.3+i*.45,0);
-  crown.scale.set(1,1.1,1);g.add(crown);
+  crown.position.set((i-1)*.35,3.3+i*.45,0);crown.scale.set(1,1.1,1);g.add(crown);
  }
  g.scale.setScalar(s);
 }
@@ -216,7 +235,9 @@ function park(x,z,w,d,name){
 }
 park(-120,120,48,42,'CENTRAL PARK');
 park(120,-120,42,48,'RIVER GARDENS');
+await setStage('Parks complete · Constructing organisation buildings…');
 
+/* BUILDINGS */
 const buildings={},interactives=[],doors=[];
 function furniture(g,x,y,z,w,d,h,color=0x795338){
  return box(g,x,y+h/2,z,w,h,d,mat(color));
@@ -226,8 +247,7 @@ function makeDoor(g,x,z,rot=0){
  box(pivot,.52,1.45,0,1.04,2.9,.16,mat(0x68452e));
  sphere(pivot,.88,1.45,.11,.09,mat(0xd4b15e));
  const door={pivot,open:false,action(){
-  door.open=!door.open;
-  pivot.rotation.y=rot+(door.open?Math.PI/2:0);
+  door.open=!door.open;pivot.rotation.y=rot+(door.open?Math.PI/2:0);
   toast(door.open?'Door opened':'Door closed');
  }};
  interactives.push({object:pivot,range:3.3,action:door.action,prompt:()=>`[E] / [O] ${door.open?'Close':'Open'} door`,door});
@@ -283,23 +303,19 @@ const hospitals=makeBuilding('hospitals','P.V HOSPITALS',-60,120,40,30,17,0xdce5
 const associates=makeBuilding('associates','P.V ASSOCIATES',60,120,32,26,13,0xc9c6c1);
 const court=makeBuilding('court','P.V ASSOCIATES COURT',120,-60,38,32,15,0xd8d0c1);
 const veda=makeBuilding('veda','VEDA PATASHALA',-120,-120,32,28,9,0xd7bd91);
+await setStage('Main buildings complete · Furnishing interiors…');
 
-/* INTERIOR DETAIL — fewer dynamic lights */
-function ceilingLight(g,x,y,z){
- box(g,x,y,z,.8,.12,.8,mat(0xe7dfc9,.4));
-}
+/* INTERIOR DETAILS */
+function ceilingLight(g,x,y,z){box(g,x,y,z,.8,.12,.8,mat(0xe7dfc9,.4))}
 function rug(g,x,z,w,d,color=0x7c3333){
- box(g,x,.29,z,w,.08,d,mat(color));
- box(g,x,.34,z,w-.45,.025,d-.45,mat(0xb99a70));
+ box(g,x,.29,z,w,.08,d,mat(color));box(g,x,.34,z,w-.45,.025,d-.45,mat(0xb99a70));
 }
 function sofa(g,x,z,color=0x455c69){
- box(g,x,.65,z,3.4,.7,1.1,mat(color));
- box(g,x,.98,z-.43,3.4,.5,.25,mat(color));
+ box(g,x,.65,z,3.4,.7,1.1,mat(color));box(g,x,.98,z-.43,3.4,.5,.25,mat(color));
  for(const dx of [-1.25,0,1.25])box(g,x+dx,1.04,z-.02,.75,.45,.85,mat(color));
 }
 function chair(g,x,z,color=0x4d5964){
- box(g,x,.55,z,.85,.18,.85,mat(0x60452f));
- box(g,x,.95,z-.34,.85,.8,.14,mat(color));
+ box(g,x,.55,z,.85,.18,.85,mat(0x60452f));box(g,x,.95,z-.34,.85,.8,.14,mat(color));
  for(const dx of [-.32,.32])for(const dz of [-.32,.32])box(g,x+dx,.25,z+dz,.09,.55,.09,mat(0x49372a));
 }
 function bookcase(g,x,z,w=3){
@@ -329,8 +345,7 @@ function addInteriorDetails(b){
  if(b.id==='mansion'){
   rug(g,-8,-6,10,7,0x743b36);sofa(g,-8,-6);sofa(g,-8,-9,0x53616a);
   box(g,-8,.65,-2,2.2,.5,1.2,mat(0x795538));
-  rug(g,8,-6,9,7,0x485d70);
-  box(g,8,.75,-6,5,.18,2.4,mat(0x795538));
+  rug(g,8,-6,9,7,0x485d70);box(g,8,.75,-6,5,.18,2.4,mat(0x795538));
   for(let i=0;i<4;i++)chair(g,6+i%2*2,-8+Math.floor(i/2)*3);
   rug(g,-8,6,9,7,0x546a55);bookcase(g,-13,3,3);bookcase(g,-3,3,3);
   rug(g,8,6,9,7,0x624a3d);box(g,8,.8,6,4,.18,2.2,mat(0x513b2c));
@@ -348,8 +363,7 @@ function addInteriorDetails(b){
    const z=-d*.2+i*5;
    box(g,-w*.2,1,z,4,.35,2.1,mat(0xe8e8e2));
    box(g,-w*.2,1.35,z,3.7,.12,1.8,mat(0x9ab7c5));
-   box(g,-w*.2,1.8,z,3.5,.7,.12,mat(0xe8e8e2));
-   chair(g,w*.18,z,0x4d7180);
+   box(g,-w*.2,1.8,z,3.5,.7,.12,mat(0xe8e8e2));chair(g,w*.18,z,0x4d7180);
   }
   box(g,w*.2,1.5,-d*.32,4,2.8,.15,mat(0xe8e8e2));plant(g,w*.35,d*.3);
  }else if(b.id==='industries'){
@@ -358,16 +372,14 @@ function addInteriorDetails(b){
   box(g,0,2,-d*.34,8,2.8,.18,mat(0x3d5262));plant(g,w*.34,d*.3);
  }else if(b.id==='associates'){
   bookcase(g,-w*.34,-d*.2,4);bookcase(g,w*.34,-d*.2,4);
-  for(let i=0;i<3;i++){
-   box(g,-4+i*4,.75,2,2.8,.18,1.5,mat(0x67472e));
-   chair(g,-4+i*4,3.4,0x374d63);
-  }
+  for(let i=0;i<3;i++){box(g,-4+i*4,.75,2,2.8,.18,1.5,mat(0x67472e));chair(g,-4+i*4,3.4,0x374d63)}
  }else if(b.id==='court'){
   bookcase(g,-w*.35,-d*.25,4);bookcase(g,w*.35,-d*.25,4);
   plant(g,-w*.36,d*.32);plant(g,w*.36,d*.32);
  }
 }
-Object.values(buildings).forEach(addInteriorDetails);
+for(const b of Object.values(buildings))addInteriorDetails(b);
+await setStage('Interiors furnished · Preparing school sports facilities…');
 
 /* SCHOOL SPORTS GROUNDS */
 function field(x,z,w,d,color=0x43864c){
@@ -387,6 +399,7 @@ box(scene,-60,.2,143,24,.4,10,mat(0xeeeeea));
 label('EMERGENCY',-60,3,149,'#d84c4c',1.1);
 
 /* COURTHOUSE EXTERIOR */
+await setStage('Building the courthouse and courtroom…');
 const courtExterior=new THREE.Group();courtExterior.position.set(court.x,0,court.z);scene.add(courtExterior);
 const stone=mat(0xd9d0bd),columnStone=mat(0xe8dfcd),courtDark=mat(0x483b31);
 for(let i=0;i<7;i++){
@@ -426,10 +439,7 @@ for(let i=0;i<3;i++)box(courtRoom,0,.35+i*.42,-10,17-i*1.5,.7,5,mat(0x75624e));
 box(courtRoom,0,2.3,-10,14,1.8,2.1,courtWood);
 box(courtRoom,0,3.25,-11,13,.18,1.8,mat(0x86613e));
 box(courtRoom,0,3.6,-10,12,.25,.22,mats.gold);
-for(const x of [-5,5]){
- box(courtRoom,x,2.8,-8,.3,1.1,.3,mats.gold);
- sphere(courtRoom,x,3.5,-8,.42,mat(0x8c6a3f));
-}
+for(const x of [-5,5]){box(courtRoom,x,2.8,-8,.3,1.1,.3,mats.gold);sphere(courtRoom,x,3.5,-8,.42,mat(0x8c6a3f))}
 label('HONOURABLE JUDGE',court.x,5,court.z-10,'#f5e4b9',.9);
 box(courtRoom,0,5.3,-15,5,2.8,.25,mat(0x593d2c));
 label('COURT EMBLEM',court.x,7,court.z-15,'#f7e5c0',.7);
@@ -464,16 +474,13 @@ for(let row=0;row<3;row++){
  }
 }
 label('PUBLIC GALLERY',court.x,4,court.z+16,'#fff',.75);
-for(const x of [-12,0,12]){
- cylinder(courtRoom,x,8,0,.25,.25,.2,mat(0x8a744d));
-}
-box(courtRoom,-17,4,0,.2,4,.2,mat(0x8c754c));
-sphere(courtRoom,-17,6,0,.45,mat(0xeee4ce));
-box(courtRoom,17,4,0,.2,4,.2,mat(0x8c3030));
-sphere(courtRoom,17,6,0,.45,mat(0xeee4ce));
+for(const x of [-12,0,12])cylinder(courtRoom,x,8,0,.25,.25,.2,mat(0x8a744d));
+box(courtRoom,-17,4,0,.2,4,.2,mat(0x8c754c));sphere(courtRoom,-17,6,0,.45,mat(0xeee4ce));
+box(courtRoom,17,4,0,.2,4,.2,mat(0x8c3030));sphere(courtRoom,17,6,0,.45,mat(0xeee4ce));
 bookcase(courtRoom,-15,11,3);bookcase(courtRoom,15,11,3);
 box(courtRoom,-14,.6,14,4,1.1,1.2,mat(0x49382d));
 box(courtRoom,14,.6,14,4,1.1,1.2,mat(0x49382d));
+await setStage('Courtroom complete · Setting up workstations…');
 
 /* INTERACTABLE WORKSTATIONS */
 function addInteractable(parent,x,y,z,range,prompt,action){
@@ -484,8 +491,7 @@ function addDesk(parent,x,z,name){
  const desk=addInteractable(parent,x,0,z,3,`[E] Use ${name}`,()=>{
   if(name==='Advocate table'){courtPanel();return}
   const wp=desk.getWorldPosition(new THREE.Vector3());
-  player.position.set(wp.x,0,wp.z+2);
-  player.rotation.y=Math.PI;sitting=true;
+  player.position.set(wp.x,0,wp.z+2);player.rotation.y=Math.PI;sitting=true;
   toast(`You are using ${name}. Press E to finish.`);
  });
  furniture(desk,0,.7,0,2.6,2,.16,0x68472f);
@@ -500,7 +506,8 @@ for(const b of [mansion,industries,schools,hospitals,associates,veda]){
 }
 addDesk(courtRoom,9,-2,'Advocate table');
 
-/* PEOPLE — reduced background population for smoother performance */
+/* PEOPLE */
+await setStage('Creating the city population and security team…');
 const npcs=[],skinTones=[0x9b6749,0xb77e5b,0x754b37,0xd19a73],clothes=[0x253b5d,0x7c3838,0x315b49,0x78633e,0x4a506b];
 function makePerson(x,z,role='Resident',isGuard=false,isPlayer=false){
  const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
@@ -531,6 +538,7 @@ for(let i=0;i<20;i++){
 for(let i=0;i<10;i++)makePerson(105+Math.random()*28,48+Math.random()*24,'Student');
 
 /* CHAUFFEUR LIMOUSINE */
+await setStage('Creating your chauffeur limousine…');
 const car=new THREE.Group();scene.add(car);
 const carBody=mat(0x111b29,.27,.65),chrome=mat(0xb9c4ca,.25,.8),rubber=mat(0x111315,.95);
 box(car,0,1,0,2.35,1.25,6.1,carBody);
@@ -558,6 +566,7 @@ const driver=makePerson(0,0,'Chauffeur');driver.scale.set(.42,.48,.42);driver.po
 car.position.set(-120,0,-48);
 
 /* ROAD ROUTING */
+await setStage('Preparing chauffeur routes and traffic…');
 const graph=new Map();
 function nodeKey(x,z){return `${x},${z}`}
 for(const x of roadXs)for(const z of roadZs)graph.set(nodeKey(x,z),{x,z,edges:[]});
@@ -595,8 +604,7 @@ function routeBetween(a,b){
  const roadPath=path.map(n=>new THREE.Vector3(n.x,0,n.z));
  return [new THREE.Vector3(a.x,0,a.z),...roadPath,new THREE.Vector3(b.x,0,e.z),new THREE.Vector3(b.x,0,b.z)];
 }
-let carPath=[],carTarget=null,carMode='parked',carIndex=0,carSpeed=13;
-let carHeading=0;
+let carPath=[],carTarget=null,carMode='parked',carIndex=0,carSpeed=13,carHeading=0;
 function startCarTo(id){
  const b=buildings[id];if(!b)return;
  carTarget=id;
@@ -619,8 +627,7 @@ function cityPanel(){
  ['Add city park',()=>{park(-30,-120,28,25,'NEW CITY PARK');toast('A new public park has been added.')}],
  ['Expand street lighting',()=>{
   for(let i=0;i<4;i++){
-   const x=-150+i*90;
-   box(scene,x,3,0,.14,6,.14,mat(0x51575d));
+   const x=-150+i*90;box(scene,x,3,0,.14,6,.14,mat(0x51575d));
    box(scene,x,5,0,.3,.12,.3,mat(0xffe7bb));
   }
   toast('Street lighting expanded.');
@@ -695,7 +702,8 @@ renderer.domElement.addEventListener('pointerdown',e=>{mouseDown=true;lastMouseX
 window.addEventListener('pointerup',()=>mouseDown=false);
 window.addEventListener('pointermove',e=>{
  if(!mouseDown)return;
- const dx=e.clientX-lastMouseX,dy=e.clientY-lastMouseY;lastMouseX=e.clientX;lastMouseY=e.clientY;
+ const dx=e.clientX-lastMouseX,dy=e.clientY-lastMouseY;
+ lastMouseX=e.clientX;lastMouseY=e.clientY;
  yaw-=dx*.004;pitch=THREE.MathUtils.clamp(pitch+dy*.002,-.25,.8);
 });
 function callCar(){
@@ -723,7 +731,8 @@ function findNearest(){
 }
 function interact(){
  if(activeInteractive){activeInteractive.action();return}
- const near=findNearest();if(near){near.action();return}
+ const near=findNearest();
+ if(near){near.action();return}
  toast('Nothing nearby to interact with. Move closer to a door, desk or building entrance.');
 }
 function collides(x,z){
@@ -739,10 +748,15 @@ function collides(x,z){
 }
 function moveToward(obj,target,dt,run=6){
  const dx=target.x-obj.position.x,dz=target.z-obj.position.z,dist=Math.hypot(dx,dz);
- if(dist>.7){const step=Math.min(dist,run*dt);obj.position.x+=dx/dist*step;obj.position.z+=dz/dist*step;obj.rotation.y=Math.atan2(dx,dz)}
+ if(dist>.7){
+  const step=Math.min(dist,run*dt);obj.position.x+=dx/dist*step;obj.position.z+=dz/dist*step;
+  obj.rotation.y=Math.atan2(dx,dz);
+ }
 }
 function updateGuards(dt){
- if(guardMode==='dismiss'||guardMode==='office'){guards.forEach((g,i)=>moveToward(g,new THREE.Vector3(-150,0,150+i*3),dt,5));return}
+ if(guardMode==='dismiss'||guardMode==='office'){
+  guards.forEach((g,i)=>moveToward(g,new THREE.Vector3(-150,0,150+i*3),dt,5));return;
+ }
  if(guardMode==='stay')return;
  guards.forEach((g,i)=>{
   const back=new THREE.Vector3(-Math.sin(yaw)*(4+i*2),0,-Math.cos(yaw)*(4+i*2));
@@ -756,7 +770,10 @@ function updatePlayer(dt){
  if(keys.arrowup||keys.w)dz-=1;if(keys.arrowdown||keys.s)dz+=1;
  if(keys.arrowleft||keys.a)dx-=1;if(keys.arrowright||keys.d)dx+=1;
  document.querySelectorAll('#mobilePad button').forEach(btn=>{
-  if(btn.dataset.pressed){if(btn.dataset.dir==='up')dz--;if(btn.dataset.dir==='down')dz++;if(btn.dataset.dir==='left')dx--;if(btn.dataset.dir==='right')dx++}
+  if(btn.dataset.pressed){
+   if(btn.dataset.dir==='up')dz--;if(btn.dataset.dir==='down')dz++;
+   if(btn.dataset.dir==='left')dx--;if(btn.dataset.dir==='right')dx++;
+  }
  });
  const len=Math.hypot(dx,dz);if(!len)return;
  dx/=len;dz/=len;
@@ -783,17 +800,14 @@ function updateCar(dt){
   else{carMode='parked';toast(`Your chauffeur has arrived at ${buildings[carTarget]?.name||'your destination'}.`)}
   return;
  }
- const target=carPath[carIndex];
- const dx=target.x-car.position.x,dz=target.z-car.position.z;
+ const target=carPath[carIndex],dx=target.x-car.position.x,dz=target.z-car.position.z;
  const dist=Math.hypot(dx,dz);
  if(dist<2.2){carIndex++;return}
  const desired=Math.atan2(dx,dz),turn=angleDifference(carHeading,desired);
  carHeading+=THREE.MathUtils.clamp(turn,-dt*1.9,dt*1.9);
  car.rotation.y=carHeading;
- const alignment=Math.max(.25,Math.cos(turn));
- const step=Math.min(dist,carSpeed*alignment*dt);
- car.position.x+=Math.sin(carHeading)*step;
- car.position.z+=Math.cos(carHeading)*step;
+ const alignment=Math.max(.25,Math.cos(turn)),step=Math.min(dist,carSpeed*alignment*dt);
+ car.position.x+=Math.sin(carHeading)*step;car.position.z+=Math.cos(carHeading)*step;
  if(car.userData.wheels)for(const wheel of car.userData.wheels)wheel.rotation.x-=step/.53;
 }
 
@@ -825,7 +839,8 @@ function updatePrompt(){
  }else promptEl.style.display='none';
 }
 
-/* TRAFFIC — fewer moving vehicles */
+/* TRAFFIC */
+await setStage('Adding traffic and final city details…');
 const traffic=[];
 for(let i=0;i<4;i++){
  const v=new THREE.Group();
@@ -842,9 +857,6 @@ function animateNPCs(dt,t){
 }
 
 /* BUTTONS */
-document.getElementById('startBtn').addEventListener('click',()=>{
- if(window.__pvCityReady){toast('Welcome, City Owner. Your city is ready to explore.');updateCamera()}
-});
 document.getElementById('cameraBtn').onclick=()=>{
  cameraMode=cameraMode===2?1:2;
  document.getElementById('cameraBtn').textContent='Camera: '+(cameraMode===2?'Third Person':'First Person');
@@ -853,20 +865,24 @@ document.getElementById('callCar').onclick=callCar;
 document.getElementById('sendCar').onclick=sendCarAway;
 document.getElementById('travelBtn').onclick=()=>{
  if(inCar)startCarTo(document.getElementById('destination').value);
- else if(Math.hypot(player.position.x-car.position.x,player.position.z-car.position.z)<5&&carMode==='parked')toast('Press F or Enter / Exit Car to board before travelling.');
+ else if(Math.hypot(player.position.x-car.position.x,player.position.z-car.position.z)<5&&carMode==='parked')
+  toast('Press F or Enter / Exit Car to board before travelling.');
  else callCar();
 };
 document.getElementById('carBtn').onclick=toggleCar;
 document.getElementById('guardBtn').onclick=guardPanel;
 document.getElementById('cityBtn').onclick=cityPanel;
 document.getElementById('fullBtn').onclick=()=>{
- if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();
+ if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+ else document.exitFullscreen?.();
 };
 
-/* STARTUP */
+/* STARTUP AND GAME LOOP */
+await setStage('Finishing the city and starting the simulation…');
 player.position.set(mansion.x,0,mansion.z+5);
 camera.position.set(mansion.x+9,5,mansion.z+12);
 const clock=new THREE.Clock();let elapsed=0;
+let lastFrame=0;
 function loop(){
  requestAnimationFrame(loop);
  const dt=Math.min(clock.getDelta(),.04);elapsed+=dt;
@@ -876,16 +892,23 @@ function loop(){
   if(v.position.x>165)v.position.x=-165;
   if(v.position.x< -165)v.position.x=165;
  });
- document.getElementById('status').textContent=`City Level ${cityLevel} · ${insideBuilding?buildings[insideBuilding].name:'City Streets'} · ${carMode==='away'?'Car away':carMode==='driving'?'Car travelling':'Car '+carMode}`;
+ status.textContent=`City Level ${cityLevel} · ${insideBuilding?buildings[insideBuilding].name:'City Streets'} · ${carMode==='away'?'Car away':carMode==='driving'?'Car travelling':'Car '+carMode}`;
  renderer.render(scene,camera);
 }
 loop();
 window.__pvCityReady=true;
-document.getElementById('footerNote').textContent='Optimised Build 09 · 3D city ready';
+note.textContent='Build 10 · 3D city ready. You can now enter.';
+status.textContent='City ready';
 window.addEventListener('resize',()=>{
- camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
+ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
 });
+}catch(error){
+ console.error('P.V Group Simulator startup error:',error);
+ window.__pvLoadError='The city encountered a startup error: '+(error?.message||'Unknown error')+'. Please reload the page.';
+ note.textContent=window.__pvLoadError;
+ status.textContent='Startup error';
+}
 </script>
 </body>
 </html>
-
