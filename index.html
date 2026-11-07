@@ -1,0 +1,1116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>P.V Group Simulator — Build 11</title>
+<style>
+:root{--glass:rgba(10,19,30,.95);--line:#ffffff30;--gold:#e8bd67;--text:#f4f7fb}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111;font-family:Segoe UI,Arial,sans-serif;color:var(--text)}
+button,select,input,textarea{font:inherit;color:var(--text);background:#172638;border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+button{cursor:pointer}button:hover{border-color:var(--gold)}
+#game{position:fixed;inset:0}canvas{display:block}
+#topbar{position:fixed;top:10px;left:10px;right:10px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;z-index:5;pointer-events:none}
+#topbar>*{pointer-events:auto}
+#brand,#status{background:var(--glass);border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+#brand{font-weight:800}#brand span{color:var(--gold)}#status{margin-left:auto;font-size:12px}
+#help{position:fixed;left:10px;bottom:10px;max-width:330px;padding:10px 12px;background:var(--glass);border:1px solid var(--line);border-radius:10px;font-size:12px;line-height:1.5;z-index:5}
+#prompt{position:fixed;left:50%;bottom:75px;transform:translateX(-50%);background:#080d14ed;border:1px solid var(--gold);border-radius:10px;padding:12px 18px;z-index:7;font-weight:700;display:none}
+#toast{position:fixed;left:50%;top:85px;transform:translateX(-50%);background:var(--glass);border:1px solid var(--line);padding:10px 15px;border-radius:9px;z-index:30;display:none}
+#panel{position:fixed;right:12px;top:75px;width:min(350px,calc(100vw - 24px));max-height:75vh;overflow:auto;background:var(--glass);border:1px solid var(--line);border-radius:13px;padding:14px;z-index:12;display:none}
+#panel h2{font-size:18px;color:var(--gold);margin:0 0 10px}
+#panel p{font-size:13px;line-height:1.5;color:#d8e0ea}
+#panel .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+#panel button{font-size:12px}
+.close{float:right}
+#crosshair{position:fixed;left:50%;top:50%;width:5px;height:5px;border-radius:50%;background:#fff9;pointer-events:none;z-index:3}
+#mobilePad{position:fixed;right:12px;bottom:12px;display:grid;grid-template-columns:43px 43px 43px;grid-template-rows:43px 43px;gap:4px;z-index:6;opacity:.7}
+#mobilePad button{padding:0;font-size:18px}
+#mobilePad button:nth-child(1){grid-column:2}
+#mobilePad button:nth-child(2){grid-column:1;grid-row:2}
+#mobilePad button:nth-child(3){grid-column:2;grid-row:2}
+#mobilePad button:nth-child(4){grid-column:3;grid-row:2}
+#start,#entryScreen,#laptopScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(120deg,#091522ed,#17283bea);z-index:40;text-align:center;padding:20px}
+#start .card,#entryScreen .card{max-width:580px;width:100%;background:#0b1524f5;border:1px solid #ffffff30;border-radius:18px;padding:27px;box-shadow:0 20px 70px #0009}
+#start h1{font-size:clamp(26px,5vw,42px);margin:0 0 8px}
+#start h1 span{color:var(--gold)}
+#start p,#entryScreen p{color:#d0d9e4;line-height:1.6}
+.primary{background:#9d7131;color:white;border:0;padding:13px 24px;font-weight:800}
+#entryScreen{display:none;z-index:35;background:radial-gradient(circle,#263b50f5,#07111dfc)}
+#entryScreen h1{color:var(--gold);margin-top:0}
+.entryButtons{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:20px}
+.entryButtons button{min-width:175px;padding:14px;font-weight:800}
+#laptopScreen{display:none;z-index:60;background:#07101af5;text-align:left}
+.laptop{width:min(900px,96vw);height:min(700px,92vh);background:#dfe5e9;color:#1a2937;border-radius:15px;overflow:auto;padding:22px;box-shadow:0 20px 70px #000}
+.laptop h1{margin:0;color:#172c40}
+.laptop p{color:#455463}
+.laptop button{margin:4px}
+.laptop .file{background:white;border:1px solid #cbd3d9;border-radius:10px;padding:13px;margin:10px 0}
+.laptop .file button{background:#203e58}
+.laptop .closeLaptop{float:right;background:#35475b}
+#communication{position:fixed;right:12px;bottom:12px;width:min(330px,calc(100vw - 24px));height:270px;background:var(--glass);border:1px solid var(--line);border-radius:13px;z-index:15;display:none;flex-direction:column;overflow:hidden}
+#communication header{padding:9px 11px;background:#1b2d40;font-weight:800;color:var(--gold);display:flex;justify-content:space-between}
+#chatLog{padding:9px;overflow:auto;flex:1;font-size:12px;line-height:1.5}
+.chatline{margin:4px 0;padding:6px 8px;border-radius:7px;background:#ffffff0c}
+.chatline b{color:#e8bd67}
+#chatControls{display:flex;padding:7px;gap:5px}
+#chatInput{min-width:0;flex:1;background:#091521}
+#chatControls button{background:#926a30}
+#chatToggle{position:fixed;right:12px;bottom:292px;z-index:16;display:none}
+#footerNote{font-size:11px;color:#aeb9c6;margin-top:12px}
+@media(max-width:650px){
+ #status{margin-left:0}#help{max-width:230px;font-size:10px}
+ #topbar{gap:4px}#topbar button,#topbar select{padding:6px;font-size:10px}
+ #brand{font-size:11px}#communication{height:220px}
+ #chatToggle{bottom:240px}
+}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}
+</script>
+</head>
+<body>
+<div id="game"></div><div id="crosshair"></div>
+
+<div id="topbar">
+ <div id="brand">P.V <span>GROUP</span> CITY</div>
+ <button id="cameraBtn">Camera: Third Person</button>
+ <button id="callCar">Call Car</button>
+ <button id="sendCar">Send Car Away</button>
+ <select id="destination">
+  <option value="mansion">Mansion</option><option value="industries">P.V Industries</option>
+  <option value="schools">P.V Schools</option><option value="hospitals">P.V Hospitals</option>
+  <option value="associates">P.V Associates</option><option value="court">P.V Associates Court</option>
+  <option value="veda">Veda Patashala</option>
+ </select>
+ <button id="travelBtn">Travel</button><button id="carBtn">Enter / Exit Car</button>
+ <button id="guardBtn">Security</button><button id="cityBtn">City Owner</button>
+ <button id="fullBtn">Full Screen</button><div id="status">Loading city…</div>
+</div>
+
+<div id="help"><b>CONTROLS</b><br>
+WASD / Arrow keys: move · Mouse drag: look around<br>
+Shift: run · E / O: interact · F: enter/exit car<br>
+V: change camera · C: call car · G: travel<br>
+Walk close to doors, people and furniture to interact.
+</div>
+<div id="prompt"></div><div id="toast"></div><div id="panel"></div>
+
+<div id="mobilePad">
+ <button data-dir="up">↑</button><button data-dir="left">←</button>
+ <button data-dir="down">↓</button><button data-dir="right">→</button>
+</div>
+
+<div id="entryScreen">
+ <div class="card">
+  <h1 id="entryTitle">P.V GROUP</h1>
+  <p id="entryDescription">Select where you would like to go.</p>
+  <div class="entryButtons" id="entryButtons"></div>
+  <p style="font-size:11px;color:#aeb9c6">Press the exit button to return to the building.</p>
+ </div>
+</div>
+
+<div id="laptopScreen">
+ <div class="laptop">
+  <button class="closeLaptop" id="closeLaptop">Close Laptop</button>
+  <h1 id="laptopTitle">P.V Group Executive System</h1>
+  <p id="laptopSubtitle">Office document management</p>
+  <div id="laptopFiles"></div>
+ </div>
+</div>
+
+<div id="communication">
+ <header><span id="chatTitle">Communication</span><button id="chatClose">×</button></header>
+ <div id="chatLog"></div>
+ <div id="chatControls"><input id="chatInput" placeholder="Type what you want to say…"><button id="chatSend">Send</button></div>
+</div>
+<button id="chatToggle">Open Communication</button>
+
+<div id="start"><div class="card">
+ <h1>Welcome to <span>P.V Group City</span></h1>
+ <p>You are the owner of this city and founder of P.V Group. Explore your residence, organisations and courthouse, meet staff, manage files and travel with your chauffeur and security team.</p>
+ <button class="primary" id="startBtn">ENTER THE CITY</button>
+ <div id="footerNote">Build 11 · Preparing the 3D city…</div>
+</div></div>
+
+<script>
+(()=>{
+ const start=document.getElementById('start'),note=document.getElementById('footerNote');
+ document.getElementById('startBtn').onclick=()=>{
+  if(!window.__pvCityReady){note.textContent='The city is still loading. Please wait.';return}
+  start.style.display='none';window.dispatchEvent(new Event('pv-enter-city'));
+ };
+ window.addEventListener('error',e=>{if(!window.__pvCityReady)note.textContent='Startup error: '+e.message});
+ window.addEventListener('unhandledrejection',e=>{if(!window.__pvCityReady)note.textContent='Startup error: '+(e.reason?.message||'Module error')});
+})();
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+const mount=document.getElementById('game');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9bb9cf);
+scene.fog=new THREE.Fog(0x9bb9cf,150,430);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,700);
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.05;
+mount.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xe5f3ff,0x65715a,2));
+const sun=new THREE.DirectionalLight(0xffedcf,2.1);
+sun.position.set(-90,150,80);scene.add(sun);
+
+const mats={
+ grass:new THREE.MeshStandardMaterial({color:0x6b9562}),
+ road:new THREE.MeshStandardMaterial({color:0x343a40}),
+ side:new THREE.MeshStandardMaterial({color:0xbab9aa}),
+ glass:new THREE.MeshStandardMaterial({color:0x6fa4bd,metalness:.25,roughness:.2}),
+ darkGlass:new THREE.MeshStandardMaterial({color:0x24495c,metalness:.2,roughness:.3}),
+ gold:new THREE.MeshStandardMaterial({color:0xc89a48,metalness:.4}),
+ wood:new THREE.MeshStandardMaterial({color:0x795338})
+};
+const mat=(c,r=.8,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+function box(parent,x,y,z,w,h,d,material){
+ const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+ o.position.set(x,y,z);parent.add(o);return o;
+}
+function cylinder(parent,x,y,z,rt,rb,h,material,seg=10){
+ const o=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),material);
+ o.position.set(x,y,z);parent.add(o);return o;
+}
+function sphere(parent,x,y,z,r,material){
+ const o=new THREE.Mesh(new THREE.SphereGeometry(r,12,8),material);
+ o.position.set(x,y,z);parent.add(o);return o;
+}
+function label(text,x,y,z,color='#ffffff',size=2){
+ const c=document.createElement('canvas'),ctx=c.getContext('2d');
+ c.width=512;c.height=128;ctx.font='bold 58px Arial';ctx.textAlign='center';
+ ctx.fillStyle='rgba(8,15,22,.7)';ctx.fillRect(12,15,488,98);
+ ctx.fillStyle=color;ctx.fillText(text,256,83);
+ const tex=new THREE.CanvasTexture(c);
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+ sp.position.set(x,y,z);sp.scale.set(size*3.6,size,.1);scene.add(sp);return sp;
+}
+box(scene,0,-.7,0,430,1,430,mats.grass);
+
+const roadXs=[-150,-90,-30,30,90,150],roadZs=[-150,-90,-30,30,90,150];
+const roadMark=mat(0xe8e0b9),crossMark=mat(0xe7e4d7);
+for(const x of roadXs){
+ box(scene,x,.015,0,13,.08,330,mats.road);
+ box(scene,x+7,.04,0,1,.12,330,mats.side);
+ box(scene,x-7,.04,0,1,.12,330,mats.side);
+ for(let z=-150;z<=150;z+=36)box(scene,x,.07,z,.22,.03,7,roadMark);
+}
+for(const z of roadZs){
+ box(scene,0,.02,z,330,.08,13,mats.road);
+ box(scene,0,.04,z+7,330,.12,1,mats.side);
+ box(scene,0,.04,z-7,330,.12,1,mats.side);
+ for(let x=-150;x<=150;x+=36)box(scene,x,.07,z,7,.03,.22,roadMark);
+}
+for(const x of roadXs)for(const z of roadZs)
+ for(let i=-2;i<=2;i++)box(scene,x+i*2,.09,z+8,.8,.035,1.6,crossMark);
+
+const treeTrunk=mat(0x705035),leafMats=[mat(0x4b8750),mat(0x3d7747)];
+function tree(x,z,s=1){
+ const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
+ cylinder(g,0,1.6,0,.28,.38,3.2,treeTrunk,8);
+ for(let i=0;i<3;i++){
+  const crown=new THREE.Mesh(new THREE.SphereGeometry(1.35-i*.15,9,7),leafMats[i%2]);
+  crown.position.set((i-1)*.35,3.3+i*.45,0);g.add(crown);
+ }
+ g.scale.setScalar(s);
+}
+for(let i=0;i<30;i++){
+ const x=(Math.random()-.5)*360,z=(Math.random()-.5)*360;
+ if(roadXs.some(v=>Math.abs(x-v)<11)||roadZs.some(v=>Math.abs(z-v)<11))continue;
+ tree(x,z,.7+Math.random()*.5);
+}
+function park(x,z,w,d,name){
+ box(scene,x,.03,z,w,.12,d,mat(0x79a86a));
+ for(let i=0;i<5;i++)tree(x-w/2+5+i*(w-10)/4,z-d/2+5+(i%2)*(d-10),.8);
+ label(name,x,4,z-d/2+3,'#fff',1.6);
+}
+park(-120,120,48,42,'CENTRAL PARK');
+park(120,-120,42,48,'RIVER GARDENS');
+
+const buildings={},interactives=[],doors=[];
+function furniture(g,x,y,z,w,d,h,color=0x795338){
+ return box(g,x,y+h/2,z,w,h,d,mat(color));
+}
+function makeDoor(g,x,z){
+ const pivot=new THREE.Group();pivot.position.set(x,0,z);g.add(pivot);
+ box(pivot,.52,1.45,0,1.04,2.9,.16,mat(0x68452e));
+ sphere(pivot,.88,1.45,.11,.09,mat(0xd4b15e));
+ const door={pivot,open:false,action(){
+  if(!door.open){door.open=true;pivot.rotation.y=Math.PI/2;openBuildingEntrance(door.buildingId)}
+  else{door.open=false;pivot.rotation.y=0;toast('Door closed')}
+ }};
+ doors.push(door);return door;
+}
+function makeBuilding(id,name,x,z,w,d,height,wallColor,style='office'){
+ const root=new THREE.Group();root.position.set(x,0,z);scene.add(root);
+ const shell=new THREE.Group(),interior=new THREE.Group(),roof=new THREE.Group();
+ root.add(shell,interior,roof);
+ const wallmat=mat(wallColor),trim=mat(0xddd7ca),win=mats.darkGlass;
+ box(shell,0,.18,0,w,.36,d,mat(0xbab9aa));
+ box(interior,0,.16,0,w-.5,.22,d-.5,mat(0xc9c1b2));
+ box(shell,-w/2+.18,height/2,0,.36,height,d,wallmat);
+ box(shell,w/2-.18,height/2,0,.36,height,d,wallmat);
+ box(shell,0,height/2,-d/2+.18,w,height,.36,wallmat);
+ box(shell,-w*.27,height/2,d/2-.18,w*.46,height,.36,wallmat);
+ box(shell,w*.34,height/2,d/2-.18,w*.32,height,.36,wallmat);
+ for(let y=2.2;y<height-1;y+=3.2){
+  for(const side of [-1,1]){
+   box(shell,side*(w/2-.1),y,0,.08,1.35,d*.72,win);
+   for(let zz=-d*.3;zz<=d*.3;zz+=4)box(shell,side*(w/2-.03),y,zz,.14,1.5,.12,trim);
+  }
+  box(shell,0,y,-d/2+.1,w*.68,1.3,.09,win);
+ }
+ box(roof,0,height+.25,0,w+.8,.5,d+.8,mat(style==='home'?0x373f4a:0x536273));
+ furniture(interior,0,.65,-d*.24,5,2.2,1.3,0x6d4a32);
+ for(const zz of [-d*.31,d*.05]){
+  box(interior,-w*.23,1.3,zz,3.8,2.5,.18,mat(0xd8d2c6));
+  box(interior,w*.23,1.3,zz,3.8,2.5,.18,mat(0xd8d2c6));
+ }
+ box(interior,-w*.19,1.25,0,.18,2.5,d*.44,mat(0xd8d2c6));
+ box(interior,w*.19,1.25,0,.18,2.5,d*.44,mat(0xd8d2c6));
+ for(let i=0;i<4;i++){
+  const xx=-w*.3+i*w*.2;
+  furniture(interior,xx,.55,d*.22,1.2,1.2,.9,0x35475a);
+ }
+ const door=makeDoor(root,-.5,d/2+.12);
+ door.buildingId=id;
+ const sign=label(name,x,height+4,z+d/2+2,'#f8e5b8',1.8);
+ const b={id,name,x,z,w,d,height,root,shell,interior,roof,sign,door,entrance:new THREE.Vector3(x,0,z+d/2+4)};
+ buildings[id]=b;return b;
+}
+const mansion=makeBuilding('mansion','P.V RESIDENCE',-120,-60,34,28,10,0xd8c7ad,'home');
+const industries=makeBuilding('industries','P.V INDUSTRIES',60,-120,34,26,20,0xc5d0d7);
+const schools=makeBuilding('schools','P.V SCHOOLS',120,60,46,34,14,0xd6d1c2);
+const hospitals=makeBuilding('hospitals','P.V HOSPITALS',-60,120,40,30,17,0xdce5e7);
+const associates=makeBuilding('associates','P.V ASSOCIATES',60,120,32,26,13,0xc9c6c1);
+const court=makeBuilding('court','P.V ASSOCIATES COURT',120,-60,38,32,15,0xd8d0c1);
+const veda=makeBuilding('veda','VEDA PATASHALA',-120,-120,32,28,9,0xd7bd91);
+
+function rug(g,x,z,w,d,color=0x7c3333){
+ box(g,x,.29,z,w,.08,d,mat(color));
+ box(g,x,.34,z,w-.45,.025,d-.45,mat(0xb99a70));
+}
+function chair(g,x,z,color=0x4d5964){
+ box(g,x,.55,z,.85,.18,.85,mat(0x60452f));
+ box(g,x,.95,z-.34,.85,.8,.14,mat(color));
+ for(const dx of [-.32,.32])for(const dz of [-.32,.32])box(g,x+dx,.25,z+dz,.09,.55,.09,mat(0x49372a));
+}
+function sofa(g,x,z,color=0x455c69){
+ box(g,x,.65,z,3.4,.7,1.1,mat(color));
+ box(g,x,.98,z-.43,3.4,.5,.25,mat(color));
+}
+function bookcase(g,x,z,w=3){
+ box(g,x,1.5,z,w,3,.4,mat(0x593b29));
+ for(let y=.65;y<2.8;y+=.72){
+  box(g,x,y,z+.23,w-.15,.08,.12,mat(0x9b7650));
+  for(let i=0;i<5;i++)box(g,x-w*.42+i*w*.18,y+.25,z+.12,.22,.42,.22,mat([0x8b3434,0x324e72,0x9a773e,0x42644c,0x6d4c79][i]));
+ }
+}
+function plant(g,x,z){
+ cylinder(g,x,.45,z,.38,.28,.8,mat(0x8b5b36));
+ for(let i=0;i<4;i++){const leaf=sphere(g,x+Math.sin(i*1.5)*.28,1.05,z+Math.cos(i*1.5)*.28,.3,mat(0x397344));leaf.scale.set(.65,1.5,.65)}
+}
+function addInteriorDetails(b){
+ const g=b.interior,w=b.w,d=b.d;
+ if(b.id==='mansion'){
+  rug(g,-8,-6,10,7,0x743b36);sofa(g,-8,-6);sofa(g,-8,-9,0x53616a);
+  rug(g,8,-6,9,7,0x485d70);box(g,8,.75,-6,5,.18,2.4,mat(0x795538));
+  for(let i=0;i<4;i++)chair(g,6+i%2*2,-8+Math.floor(i/2)*3);
+  rug(g,-8,6,9,7,0x546a55);bookcase(g,-13,3,3);bookcase(g,-3,3);
+  rug(g,8,6,9,7,0x624a3d);plant(g,14,10);plant(g,-14,-10);
+ }else if(b.id==='schools'||b.id==='veda'){
+  bookcase(g,-w*.3,-d*.2,4);
+  for(let row=0;row<3;row++)for(let col=0;col<3;col++){
+   const x=-w*.2+col*4,z=-d*.05+row*3.1;
+   furniture(g,x,.55,z,2.2,1.1,.16,0x9a7047);chair(g,x,z+1,0x354d68);
+  }
+  box(g,0,1.7,-d*.34,7,2.5,.16,mat(0x31634d));plant(g,w*.35,d*.3);
+ }else if(b.id==='hospitals'){
+  for(let i=0;i<3;i++){
+   const z=-d*.2+i*5;
+   box(g,-w*.2,1,z,4,.35,2.1,mat(0xe8e8e2));
+   box(g,-w*.2,1.35,z,3.7,.12,1.8,mat(0x9ab7c5));
+   chair(g,w*.18,z,0x4d7180);
+  }
+ }else{
+  bookcase(g,-w*.34,-d*.2,4);bookcase(g,w*.34,-d*.2,4);
+  for(let i=0;i<3;i++){furniture(g,-4+i*4,.7,2,2.8,1.5,.18,0x67472e);chair(g,-4+i*4,3.4,0x374d63)}
+  plant(g,w*.35,d*.3);
+ }
+}
+Object.values(buildings).forEach(addInteriorDetails);
+
+function field(x,z,w,d,color=0x43864c){
+ box(scene,x,.02,z,w,.1,d,mat(color));
+ for(let i=0;i<2;i++){
+  box(scene,x-w/2+1+i*(w-2),.1,z,.12,.04,d-2,mat(0xf2f2e8));
+  box(scene,x,.1,z-d/2+1+i*(d-2),w-2,.04,.12,mat(0xf2f2e8));
+ }
+}
+field(120,105,42,24);field(166,70,24,30,0x5b9a53);
+label('SPORTS COMPLEX',120,3,89,'#fff',1.3);
+box(scene,-60,.2,143,24,.4,10,mat(0xeeeeea));
+label('EMERGENCY',-60,3,149,'#d84c4c',1.1);
+
+/* Courthouse exterior */
+const courtExterior=new THREE.Group();courtExterior.position.set(court.x,0,court.z);scene.add(courtExterior);
+const stone=mat(0xd9d0bd),columnStone=mat(0xe8dfcd);
+for(let i=0;i<7;i++){
+ const x=-15+i*5;
+ box(courtExterior,x,.3,18,4,.6,7,mat(0xc3b9a7));
+ cylinder(courtExterior,x,5.2,15.2,1.05,1.05,9,columnStone,12);
+ cylinder(courtExterior,x,1,15.2,1.45,1.45,.5,stone,12);
+ cylinder(courtExterior,x,9.6,15.2,1.4,1.4,.55,stone,12);
+}
+box(courtExterior,0,10.3,15,38,1.2,2,stone);
+const pediment=new THREE.Mesh(new THREE.ConeGeometry(21,7,4),stone);
+pediment.rotation.y=Math.PI/4;pediment.position.set(0,13.8,15);pediment.scale.set(1,.55,.3);courtExterior.add(pediment);
+for(let i=0;i<5;i++)box(courtExterior,0,.35+i*.42,21,31-i*2,.65,4,mat(0xb9af9d));
+label('P.V ASSOCIATES COURT',court.x,19,court.z+18,'#fff0cb',1.5);
+
+/* ---------- NEW BUILD 11 ROOM SYSTEM ---------- */
+const roomRoot=new THREE.Group();scene.add(roomRoot);roomRoot.visible=false;
+let roomMode=null,roomBuilding=null,roomDoorReturn=null;
+let roomActors=[],roomFurniture=[];
+let roomStartPosition=new THREE.Vector3();
+
+function roomPerson(parent,x,z,role,coat=0x283e58,skin=0xb77e5b){
+ const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
+ const skinMat=mat(skin),coatMat=mat(coat);
+ box(g,0,1.2,0,.65,1.05,.38,coatMat);
+ cylinder(g,-.18,.43,0,.13,.15,.8,mat(0x252a31),8);
+ cylinder(g,.18,.43,0,.13,.15,.8,mat(0x252a31),8);
+ sphere(g,0,2,0,.34,skinMat);
+ sphere(g,0,2.25,-.04,.33,mat(0x29221e));
+ sphere(g,-.12,2.03,.29,.035,mat(0x171717));
+ sphere(g,.12,2.03,.29,.035,mat(0x171717));
+ g.userData.role=role;roomActors.push(g);return g;
+}
+function roomWall(parent,x,y,z,w,h,d,color=0xe3ded4){
+ box(parent,x,y,z,w,h,d,mat(color));
+}
+
+/* UPDATED: additional lighting for private cabins and meeting rooms only */
+function makeRoomShell(title,wallColor=0xe3ded4){
+ roomRoot.clear();
+ roomActors=[];
+ roomFurniture=[];
+ roomRoot.visible=true;
+
+ // These extra lights are restricted to cabins and meeting rooms.
+ // The courtroom continues using the original scene lighting.
+ if(roomMode==='cabin'||roomMode==='meeting'){
+
+  const ambient=new THREE.AmbientLight(0xffffff,1.2);
+  roomRoot.add(ambient);
+
+  const hemisphere=new THREE.HemisphereLight(
+   0xffffff,
+   0x9b8b78,
+   1.3
+  );
+  hemisphere.position.set(0,12,0);
+  roomRoot.add(hemisphere);
+
+  // Nine ceiling lights spread evenly across the room.
+  const lightPositions=[
+   [-12,-10],[0,-10],[12,-10],
+   [-12,2],[0,2],[12,2],
+   [-12,12],[0,12],[12,12]
+  ];
+
+  lightPositions.forEach(([x,z])=>{
+   const light=new THREE.PointLight(
+    0xfff1dc,
+    45,
+    42,
+    2
+   );
+   light.position.set(x,10.5,z);
+   roomRoot.add(light);
+  });
+
+  // Illuminated ceiling panels.
+  lightPositions.forEach(([x,z])=>{
+   const panel=new THREE.Mesh(
+    new THREE.BoxGeometry(2.8,.14,1.6),
+    new THREE.MeshStandardMaterial({
+     color:0xffffff,
+     emissive:0xffedcf,
+     emissiveIntensity:.8
+    })
+   );
+   panel.position.set(x,11.75,z);
+   roomRoot.add(panel);
+  });
+ }
+
+ // Original room structure — unchanged.
+ box(roomRoot,0,-.15,0,38,.3,34,mat(0x9b9488));
+ box(roomRoot,0,6,-17,38,12,.35,mat(wallColor));
+ box(roomRoot,-19,6,0,.35,12,34,mat(wallColor));
+ box(roomRoot,19,6,0,.35,12,34,mat(wallColor));
+ box(roomRoot,0,6,17,38,12,.35,mat(wallColor));
+ box(roomRoot,0,12,0,38,.25,34,mat(0xddd5c6));
+ for(let x=-15;x<=15;x+=10){
+  box(roomRoot,x,5.5,-16.7,5,5,.12,mats.darkGlass);
+  box(roomRoot,x,5.5,-16.58,.12,5,.15,mats.gold);
+ }
+ for(let x=-15;x<=15;x+=10)box(roomRoot,x,11.85,0,.9,.15,.9,mat(0xffe7b0));
+ box(roomRoot,0,1.6,16.7,4,3.2,.25,mat(0x5b3c2b));
+ label(title,0,10,-16,'#f5e4b9',1.5);
+}
+
+function makeExecutiveDesk(){
+ furniture(roomRoot,0,.8,-5,6,2.8,.2,0x543a29);
+ box(roomRoot,0,1.75,-5.2,2.2,.12,1.1,mat(0x282d33));
+ box(roomRoot,0,2.2,-5.2,2,.85,.12,mat(0x151d25));
+ box(roomRoot,0,2.2,-5.12,1.75,.62,.025,mat(0x4387a0));
+ box(roomRoot,-1.9,1.05,-4.4,1,.12,.7,mat(0xc5c9ca));
+ for(let i=0;i<3;i++)box(roomRoot,1.8+i*.25,1.02,-4.2,.25,.12,.35,mat(0xeee5d5));
+ chair(roomRoot,0,0,0x303d50);
+ bookcase(roomRoot,-13,-11,4);
+ plant(roomRoot,14,11);
+ sofa(roomRoot,-10,6);
+ chair(roomRoot,10,7,0x475a69);
+ roomFurniture.push({kind:'desk',x:0,z:-5});
+}
+function makeMeetingRoom(){
+ makeRoomShell('P.V GROUP — MEETING ROOM',0xd9dedf);
+ rug(roomRoot,0,0,22,17,0x43586a);
+ box(roomRoot,0,.95,-1,14,1.8,4,mat(0x65472f));
+ box(roomRoot,0,1.9,-1,14.2,.15,4.2,mat(0x99724c));
+ for(let i=0;i<6;i++){
+  chair(roomRoot,-9+i*3,4.2,0x35465b);
+  chair(roomRoot,-9+i*3,-6.2,0x35465b);
+ }
+ box(roomRoot,0,5,-16.3,10,5,.18,mat(0x273f52));
+ box(roomRoot,0,5,-16.15,9.5,4.5,.04,mat(0x39748c));
+ label('MEETING ROOM',0,8,-16,'#fff',1);
+ bookcase(roomRoot,-15,-10,3);plant(roomRoot,15,10);
+ for(let i=0;i<5;i++)roomPerson(roomRoot,-8+i*4,-11,['Director','Coordinator','Manager','Secretary','Advisor'][i],[0x273b54,0x67463b,0x385a49,0x4c506a,0x685c3d][i], [0xb77e5b,0x9b6749,0xd19a73,0x754b37,0xb77e5b][i]);
+ roomFurniture.push({kind:'meeting'});
+}
+function makeCabin(id){
+ const b=buildings[id];
+ makeRoomShell((id==='court'?'HEAD ADVOCATE CHAMBER':id==='mansion'?'PRIVATE STUDY':b.name+' — PRIVATE CABIN'),0xe5dfd3);
+ rug(roomRoot,0,0,21,17,0x6d3435);
+ makeExecutiveDesk();
+ for(let i=0;i<3;i++)chair(roomRoot,5+i*2,0,0x46576a);
+ roomPerson(roomRoot,-8,4,'Office Assistant',0x354c62,0xb77e5b);
+}
+function makeCourtroom(){
+ makeRoomShell('P.V ASSOCIATES COURT — COURTROOM',0xd7cbb8);
+ rug(roomRoot,0,0,30,25,0x70272d);
+ const wood=mat(0x4a3024),panel=mat(0x684733),gold=mat(0xb89555);
+ /* Judge's raised bench */
+ box(roomRoot,0,1.4,-12,14,2.8,3.5,wood);
+ box(roomRoot,0,2.95,-12,14.2,.18,3.7,gold);
+ box(roomRoot,0,3.5,-14,10,1.2,.3,panel);
+ box(roomRoot,0,4.5,-14,7,1.1,.2,gold);
+ roomPerson(roomRoot,0, -10,'Hon’ble Judge',0x292b32,0xb77e5b);
+ chair(roomRoot,0,-9,0x252a31);
+ /* Petitioner and respondent advocates */
+ for(const x of [-9,9]){
+  box(roomRoot,x,1,-3,7,1.7,2.5,wood);
+  box(roomRoot,x,1.9,-3,7.2,.15,2.7,mat(0x99724c));
+  for(let i=-1;i<=1;i++){
+   chair(roomRoot,x+i*2.1,-.2,0x292f38);
+   roomPerson(roomRoot,x+i*2.1,-1.5,x<0?'Petitioner Advocate':'Respondent Advocate',x<0?0x252f48:0x3b3030,i===0?0xb77e5b:0x9b6749);
+  }
+ }
+ /* Witness box */
+ box(roomRoot,0,1.4,5,4,2.8,3,wood);
+ for(const x of [-2,2])box(roomRoot,x,2.3,5,.12,3,.12,gold);
+ box(roomRoot,0,3.7,5,4,.12,.12,gold);
+ chair(roomRoot,0,5,0x333b46);
+ roomPerson(roomRoot,0,6.3,'Witness',0x66513d,0x9b6749);
+ /* Clerk and stenographer */
+ box(roomRoot,-15,.9,-8,4,1.8,2,wood);
+ chair(roomRoot,-15,-5.8,0x41464e);
+ roomPerson(roomRoot,-15,-7,'Court Clerk',0x343e4b,0xd19a73);
+ box(roomRoot,15,.9,-8,4,1.8,2,wood);
+ chair(roomRoot,15,-5.8,0x41464e);
+ roomPerson(roomRoot,15,-7,'Stenographer',0x374b55,0xb77e5b);
+ /* Public gallery */
+ for(let row=0;row<3;row++)for(let i=0;i<7;i++){
+  const x=-13+i*4.3,z=9+row*3.5;
+  box(roomRoot,x,.7+row*.15,z,3.5,.3,1.2,wood);
+  chair(roomRoot,x,z+.8,0x51443a);
+  if(row===0||i%2===0)roomPerson(roomRoot,x,z+1.6,'Public Gallery',0x394a5c,[0x9b6749,0xb77e5b,0xd19a73,0x754b37][(i+row)%4]);
+ }
+ bookcase(roomRoot,-16,13,3);bookcase(roomRoot,16,13,3);
+ label('HON’BLE COURT',0,8,-14,'#fff0cb',1.1);
+ roomFurniture.push({kind:'court'});
+}
+const executiveData={
+ mansion:[['Residence maintenance approval','Repairs and facilities review.'],['Private estate expenditure','Routine residence administration.']],
+ industries:[['Industrial expansion proposal','Review the proposed development plan.'],['Factory equipment approval','Equipment and maintenance request.']],
+ schools:[['School staffing approval','Teacher and coordinator appointments.'],['Academic programme proposal','Review the upcoming school programme.']],
+ hospitals:[['Hospital equipment request','Medical equipment procurement proposal.'],['Staffing and facilities approval','Hospital administration request.']],
+ associates:[['Legal review memorandum','Internal legal department review.'],['Client representation approval','Review a proposed legal engagement.']],
+ court:[['Court filing approval','Review a fictional filing for the court.'],['Case administration note','Internal court administration document.']],
+ veda:[['Patashala programme approval','Educational programme proposal.'],['Facilities maintenance request','Routine building maintenance.']]
+};
+const fileStates={};
+for(const [id,arr] of Object.entries(executiveData))fileStates[id]=arr.map((f,i)=>({title:f[0],detail:f[1],status:'Pending',id:i}));
+
+/* ---------- NPCs and player ---------- */
+const npcs=[],skinTones=[0x9b6749,0xb77e5b,0x754b37,0xd19a73],clothes=[0x253b5d,0x7c3838,0x315b49,0x78633e,0x4a506b];
+function makePerson(x,z,role='Resident',isGuard=false,isPlayer=false){
+ const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
+ const skin=mat(isPlayer?0xb77b58:skinTones[Math.floor(Math.random()*skinTones.length)]);
+ const cloth=mat(isPlayer?0x202a3b:isGuard?0x263442:clothes[Math.floor(Math.random()*clothes.length)]);
+ const hair=mat(isPlayer?0x17191d:0x29221e);
+ box(g,0,1.35,0,.72,1.05,.42,cloth);
+ cylinder(g,-.2,.52,0,.13,.16,.9,mat(0x222b35),8);
+ cylinder(g,.2,.52,0,.13,.16,.9,mat(0x222b35),8);
+ sphere(g,0,2.15,0,.38,skin);sphere(g,0,2.42,-.03,.36,hair);
+ sphere(g,-.13,2.18,.31,.045,mat(0x171717));sphere(g,.13,2.18,.31,.045,mat(0x171717));
+ if(isPlayer){
+  box(g,0,1.62,.23,.13,.55,.05,mats.gold);
+  box(g,-.32,1.65,.23,.08,.55,.04,mat(0xf4f0e8));
+  box(g,.32,1.65,.23,.08,.55,.04,mat(0xf4f0e8));
+ }
+ if(isGuard)box(g,.38,1.45,.22,.16,.25,.12,mats.gold);
+ g.userData={role,isGuard,isPlayer};npcs.push(g);return g;
+}
+const player=makePerson(-120,-55,'City Owner',false,true);
+const guards=[makePerson(-123,-51,'Bodyguard',true),makePerson(-117,-50,'Bodyguard',true)];
+for(let i=0;i<20;i++){
+ let x=(Math.random()-.5)*280,z=(Math.random()-.5)*280;
+ if(roadXs.some(v=>Math.abs(x-v)<8)||roadZs.some(v=>Math.abs(z-v)<8))continue;
+ makePerson(x,z,i%5===0?'Teacher':i%7===0?'Doctor':'Resident');
+}
+for(let i=0;i<10;i++)makePerson(105+Math.random()*28,48+Math.random()*24,'Student');
+
+/* ---------- Limousine and chauffeur ---------- */
+const car=new THREE.Group();scene.add(car);
+const carBody=mat(0x111b29,.27,.65),chrome=mat(0xb9c4ca,.25,.8),rubber=mat(0x111315,.95);
+box(car,0,1,0,2.35,1.25,6.1,carBody);
+box(car,0,1.85,-.15,2.05,.9,3.65,mats.darkGlass);
+box(car,0,1.48,2.75,2.3,.42,.55,carBody);
+box(car,0,1.48,-2.75,2.3,.42,.55,carBody);
+for(const x of [-.78,.78]){
+ box(car,x,1.95,0,.07,.95,3.7,chrome);
+ for(const z of [-1.15,1.15])box(car,x,1.85,z,.1,.9,.07,chrome);
+}
+for(const x of [-.92,.92])for(const z of [-2,2]){
+ const wheel=new THREE.Group();wheel.position.set(x,.48,z);car.add(wheel);
+ cylinder(wheel,0,0,0,.53,.53,.28,rubber,12).rotation.z=Math.PI/2;
+ cylinder(wheel,0,0,0,.24,.24,.3,chrome,12).rotation.z=Math.PI/2;
+ car.userData.wheels??=[];car.userData.wheels.push(wheel);
+}
+const driver=makePerson(0,0,'Chauffeur');driver.scale.set(.42,.48,.42);driver.position.set(0,.62,-.5);car.add(driver);
+car.position.set(-120,0,-48);
+
+/* ---------- Road routing ---------- */
+const graph=new Map();
+function nodeKey(x,z){return `${x},${z}`}
+for(const x of roadXs)for(const z of roadZs)graph.set(nodeKey(x,z),{x,z,edges:[]});
+for(const x of roadXs)for(const z of roadZs){
+ const n=graph.get(nodeKey(x,z));
+ for(const [dx,dz] of [[60,0],[-60,0],[0,60],[0,-60]]){
+  const k=nodeKey(x+dx,z+dz);if(graph.has(k))n.edges.push(k);
+ }
+}
+function nearestNode(pos){
+ let best=null,dist=Infinity;
+ for(const n of graph.values()){const d=Math.hypot(n.x-pos.x,n.z-pos.z);if(d<dist){dist=d;best=n}}
+ return best;
+}
+function routeBetween(a,b){
+ const s=nearestNode(a),e=nearestNode(b);if(!s||!e)return [a,b];
+ const dist=new Map(),prev=new Map(),open=new Set([nodeKey(s.x,s.z)]);
+ for(const k of graph.keys())dist.set(k,Infinity);
+ dist.set(nodeKey(s.x,s.z),0);
+ while(open.size){
+  let u=null,ud=Infinity;for(const k of open)if(dist.get(k)<ud){u=k;ud=dist.get(k)}
+  if(!u)break;open.delete(u);if(u===nodeKey(e.x,e.z))break;
+  for(const v of graph.get(u).edges){const nd=ud+60;if(nd<dist.get(v)){dist.set(v,nd);prev.set(v,u);open.add(v)}}
+ }
+ let path=[],k=nodeKey(e.x,e.z);path.push(graph.get(k));
+ while(prev.has(k)){k=prev.get(k);path.push(graph.get(k))}
+ path.reverse();
+ const roadPath=path.map(n=>new THREE.Vector3(n.x,0,n.z));
+ return [new THREE.Vector3(a.x,0,a.z),...roadPath,new THREE.Vector3(b.x,0,e.z),new THREE.Vector3(b.x,0,b.z)];
+}
+let carPath=[],carTarget=null,carMode='parked',carIndex=0,carSpeed=13,carHeading=0;
+function startCarTo(id){
+ const b=buildings[id];if(!b)return;
+ carTarget=id;if(carMode==='away'){car.position.set(150,0,150);car.visible=true}
+ carPath=routeBetween(car.position,b.entrance);carIndex=1;carMode='driving';
+ toast(`Chauffeur is driving to ${b.name}.`);
+}
+function sendCarAway(){
+ if(carMode==='away'||carMode==='leaving')return;
+ carPath=routeBetween(car.position,new THREE.Vector3(150,0,150));carIndex=1;carMode='leaving';
+ toast('Your chauffeur is taking the car away.');
+}
+
+/* ---------- UI helpers ---------- */
+const panel=document.getElementById('panel'),promptEl=document.getElementById('prompt'),toastEl=document.getElementById('toast');
+let toastTimer;
+function toast(s){toastEl.textContent=s;toastEl.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.style.display='none',2600)}
+function showPanel(title,html,actions=[]){
+ panel.style.display='block';
+ panel.innerHTML=`<button class="close" id="panelClose">✕</button><h2>${title}</h2><p>${html}</p><div class="actions" id="panelActions"></div>`;
+ panel.querySelector('#panelClose').onclick=hidePanel;
+ const boxEl=panel.querySelector('#panelActions');
+ for(const [name,fn] of actions){const b=document.createElement('button');b.textContent=name;b.onclick=fn;boxEl.appendChild(b)}
+}
+function hidePanel(){panel.style.display='none'}
+
+let cityLevel=1;
+function cityPanel(){
+ showPanel('City Owner',`You own this city. Current development level: ${cityLevel}.`,[
+ ['Improve roads',()=>{cityLevel++;toast('Road network upgraded. City level '+cityLevel)}],
+ ['Add city park',()=>{park(-30,-120,28,25,'NEW CITY PARK');toast('A new public park has been added.')}],
+ ['Close',hidePanel]
+ ]);
+}
+let guardMode='follow';
+function guardPanel(){
+ showPanel('Security Command',`Your security team currently has ${guards.length} guards.`,[
+ ['Follow Me',()=>{guardMode='follow';toast('Bodyguards are following you.');hidePanel()}],
+ ['Stay Here',()=>{guardMode='stay';toast('Bodyguards will remain here.');hidePanel()}],
+ ['Dismiss All Bodyguards',()=>{guardMode='dismiss';toast('Bodyguards are returning to the security office.');hidePanel()}],
+ ['Call Bodyguards',()=>{guardMode='call';toast('Your bodyguards are coming to you.');hidePanel()}],
+ ['Close',hidePanel]
+ ]);
+}
+
+/* ---------- Room entrance selection ---------- */
+const entryScreen=document.getElementById('entryScreen');
+const entryTitle=document.getElementById('entryTitle');
+const entryDescription=document.getElementById('entryDescription');
+const entryButtons=document.getElementById('entryButtons');
+let pendingBuilding=null;
+function openBuildingEntrance(id){
+ pendingBuilding=id;const b=buildings[id];
+ entryScreen.style.display='flex';
+ entryTitle.textContent=b.name;
+ entryDescription.textContent=id==='court'
+  ?'The courthouse entrance is open. Select the courtroom to enter the hearing hall, or visit your private chamber.'
+  :'Welcome to '+b.name+'. Choose a room to enter.';
+ entryButtons.innerHTML='';
+ const add=(txt,fn)=>{const btn=document.createElement('button');btn.textContent=txt;btn.onclick=fn;entryButtons.appendChild(btn)};
+ if(id==='court'){
+  add('ENTER COURTROOM',()=>enterRoom('court'));
+  add('PRIVATE ADVOCATE CABIN',()=>enterRoom('cabin'));
+ }else{
+  add('PRIVATE EXECUTIVE CABIN',()=>enterRoom('cabin'));
+  add('MEETING ROOM',()=>enterRoom('meeting'));
+  add('MAIN BUILDING',()=>{entryScreen.style.display='none';toast('You entered '+b.name+'.')});
+ }
+ add('CLOSE ENTRANCE',()=>{entryScreen.style.display='none';toast('You remain outside the building.')});
+}
+function enterRoom(mode){
+ if(!pendingBuilding)return;
+ roomBuilding=pendingBuilding;roomMode=mode;
+ roomStartPosition.copy(player.position);
+ if(mode==='court')makeCourtroom();
+ else if(mode==='meeting')makeMeetingRoom();
+ else makeCabin(roomBuilding);
+ entryScreen.style.display='none';hidePanel();
+ /* Save visibility of the city objects and hide them while inside the room. */
+ for(const child of scene.children){
+  if(child===roomRoot)continue;
+  child.userData.roomPreviousVisible=child.visible;
+  child.visible=false;
+ }
+ roomRoot.visible=true;player.visible=true;player.position.set(0,0,11);
+ player.rotation.y=Math.PI;
+ cameraMode=2;yaw=0;pitch=.15;
+ document.getElementById('cameraBtn').textContent='Camera: Third Person';
+ document.getElementById('chatToggle').style.display='block';
+ document.getElementById('communication').style.display='flex';
+ document.getElementById('chatTitle').textContent=mode==='court'?'Court Communication':mode==='meeting'?'Meeting Communication':'Office Communication';
+ clearChat();
+ addChat('System',mode==='court'?'The court is now accessible. Address the court through the communication panel.':mode==='meeting'?'Meeting room opened. You may address the attendees.':'Your private cabin is ready.');
+ toast(mode==='court'?'Courtroom entered.':mode==='meeting'?'Meeting room entered.':'Private cabin entered.');
+}
+function leaveRoom(){
+ if(!roomMode)return;
+ roomRoot.visible=false;
+ for(const child of scene.children){
+  if(child===roomRoot)continue;
+  if(child.userData.roomPreviousVisible!==undefined){
+   child.visible=child.userData.roomPreviousVisible;delete child.userData.roomPreviousVisible;
+  }
+ }
+ player.position.copy(roomStartPosition);
+ roomMode=null;roomBuilding=null;sitting=false;
+ document.getElementById('communication').style.display='none';
+ document.getElementById('chatToggle').style.display='none';
+ toast('You returned to the building entrance.');
+}
+
+/* ---------- Private cabin desk and laptop ---------- */
+let sitting=false,laptopOpen=false;
+function openLaptop(){
+ if(roomMode!=='cabin'){toast('The executive laptop is available in your private cabin.');return}
+ if(!sitting){toast('Sit at your executive desk first.');return}
+ laptopOpen=true;
+ const id=roomBuilding,b=buildings[id];
+ document.getElementById('laptopTitle').textContent=b.name+' — Executive System';
+ document.getElementById('laptopSubtitle').textContent='Document management · Appointments · Administration';
+ renderFiles();
+ document.getElementById('laptopScreen').style.display='flex';
+}
+function renderFiles(){
+ const target=document.getElementById('laptopFiles');target.innerHTML='';
+ const files=fileStates[roomBuilding]||[];
+ for(const f of files){
+  const div=document.createElement('div');div.className='file';
+  const statusColor=f.status==='Signed'?'#217346':f.status==='Returned'?'#a33':'#9a6a17';
+  div.innerHTML=`<b>${f.title}</b><p>${f.detail}</p><p>Status: <b style="color:${statusColor}">${f.status}</b></p>`;
+  if(f.status==='Pending'){
+   const review=document.createElement('button');review.textContent='Review File';
+   review.onclick=()=>{document.getElementById('laptopSubtitle').textContent='Reviewing: '+f.title+' — '+f.detail};
+   const sign=document.createElement('button');sign.textContent='Sign File';
+   sign.onclick=()=>{f.status='Signed';toast('File signed: '+f.title);renderFiles()};
+   const reject=document.createElement('button');reject.textContent='Return File';
+   reject.onclick=()=>{f.status='Returned';toast('File returned for revision.');renderFiles()};
+   div.append(review,sign,reject);
+  }
+  target.appendChild(div);
+ }
+ const extra=document.createElement('div');extra.className='file';
+ extra.innerHTML='<b>Appointments</b><p>Executive calendar and internal meeting schedule.</p><p>Next scheduled item: Internal management review.</p>';
+ target.appendChild(extra);
+}
+document.getElementById('closeLaptop').onclick=()=>{
+ laptopOpen=false;document.getElementById('laptopScreen').style.display='none';
+};
+function addRoomDeskInteractives(){
+ roomFurniture.push({kind:'laptop',x:0,z:-5});
+ roomFurniture.push({kind:'chair',x:0,z:0});
+}
+
+/* ---------- Communication ---------- */
+const communication=document.getElementById('communication');
+const chatLog=document.getElementById('chatLog');
+const chatInput=document.getElementById('chatInput');
+function clearChat(){chatLog.innerHTML=''}
+function addChat(speaker,message){
+ const line=document.createElement('div');line.className='chatline';
+ const b=document.createElement('b');b.textContent=speaker+': ';
+ line.append(b,document.createTextNode(message));chatLog.appendChild(line);chatLog.scrollTop=chatLog.scrollHeight;
+}
+function responseFor(message){
+ const m=message.toLowerCase();
+ if(roomMode==='court'){
+  if(m.includes('witness')||m.includes('question'))return ['The witness is ready to respond to the question.','The court will take note of that question.','The witness has heard your question.'][Math.floor(Math.random()*3)];
+  if(m.includes('objection'))return 'The judge will consider the objection. Please explain the grounds for it.';
+  if(m.includes('evidence')||m.includes('document'))return 'Please identify the document and explain its relevance to the matter.';
+  if(m.includes('judge')||m.includes('your honour'))return 'The court is listening. Please proceed with your submission.';
+  return 'The court has noted your submission. Please continue in an orderly manner.';
+ }
+ if(roomMode==='meeting'){
+  if(m.includes('budget')||m.includes('cost'))return 'The finance team can prepare a summary of the proposed costs for discussion.';
+  if(m.includes('school')||m.includes('teacher'))return 'The education team will review the staffing and academic requirements.';
+  if(m.includes('hospital')||m.includes('doctor'))return 'The hospital administration team will prepare an operational update.';
+  if(m.includes('approve')||m.includes('decision'))return 'The attendees have noted your direction. We can record the decision in the meeting minutes.';
+  return 'Thank you. The team has noted your point and will discuss the next steps.';
+ }
+ if(m.includes('file')||m.includes('sign'))return 'Your pending documents are available on the executive laptop.';
+ if(m.includes('meeting'))return 'I can prepare the meeting room and notify the department representatives.';
+ if(m.includes('report'))return 'I will ask the relevant department to prepare an update.';
+ return 'Certainly. I have noted your instruction and will pass it to the appropriate team.';
+}
+function sendChat(){
+ const msg=chatInput.value.trim();if(!msg)return;
+ addChat('You',msg);chatInput.value='';
+ const speaker=roomMode==='court'?'Court':roomMode==='meeting'?'Department representative':'Office assistant';
+ addChat(speaker,responseFor(msg));
+}
+document.getElementById('chatSend').onclick=sendChat;
+chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')sendChat()});
+document.getElementById('chatClose').onclick=()=>communication.style.display='none';
+document.getElementById('chatToggle').onclick=()=>communication.style.display=communication.style.display==='none'?'flex':'none';
+
+/* ---------- Court case workflow ---------- */
+const cases=[
+ {title:'Case 001 — Water Supply Society',summary:'A fictional dispute concerning interrupted water supply and civic responsibility.'},
+ {title:'Case 002/2026 — Medical Negligence',summary:'A fictional medical negligence matter involving P.V. Hospitals.'},
+ {title:'Case 003/2026 — The Inherited Law Dispute',summary:'A fictional dispute about colonial-era land access restrictions after Independence.'}
+];
+let activeCase=0,hearingStep=0;
+function courtPanel(){
+ const c=cases[activeCase];
+ showPanel('P.V Associates Court',`<b>${c.title}</b><br>${c.summary}<br><br>Hearing stage: ${['Not started','Opening submissions','Evidence and witness questions','Opposing advocate','Judge’s decision'][hearingStep]}`,[
+ ['Choose case',()=>showPanel('Select a fictional case',cases.map(v=>v.title).join('<br>'),cases.map((v,i)=>[v.title,()=>{activeCase=i;hearingStep=0;courtPanel()}]).concat([['Close',hidePanel]]))],
+ ['Call case for hearing',()=>{hearingStep=1;toast('The court is now in session.');courtPanel()}],
+ ['Present arguments',()=>{if(hearingStep<1){toast('Call the case first.');return}hearingStep=2;toast('Opening submissions recorded.');courtPanel()}],
+ ['Question witness',()=>{if(hearingStep<2){toast('Present your opening submissions first.');return}hearingStep=3;toast('Witness questioning completed.');courtPanel()}],
+ ['Hear opposing advocate',()=>{if(hearingStep<3){toast('Complete witness questioning first.');return}hearingStep=4;toast('Opposing advocate has presented submissions.');courtPanel()}],
+ ['Judge gives decision',()=>{if(hearingStep<4){toast('The hearing is not ready for a decision.');return}toast('The judge has reserved the fictional decision.');hearingStep=0;hidePanel()}],
+ ['Close',hidePanel]
+ ]);
+}
+
+/* ---------- Main-world desk interaction and building controls ---------- */
+const interactivesMain=[];
+function addMainDesk(b,name){
+ const g=new THREE.Group();g.position.set(b.x,0,b.z);scene.add(g);
+ furniture(g,0,.75,0,3,2,.18,0x68472f);
+ box(g,0,1.55,-.35,1.5,.12,.8,mat(0x252a30));
+ box(g,0,1.9,-.35,1.3,.7,.08,mat(0x202b34));
+ box(g,0,1.93,-.29,1.1,.5,.025,mat(0x4c8da7));
+ interactivesMain.push({object:g,range:3,action:()=>buildingPanel(b.id),prompt:`[E] Open ${name}`});
+}
+function buildingPanel(id){
+ const b=buildings[id];
+ showPanel(b.name,`You are at ${b.name}. Open the main entrance to access its private cabin and rooms.`,[
+ ['Open entrance',()=>{hidePanel();openBuildingEntrance(id)}],
+ ['Property improvements',()=>{cityLevel++;toast(`${b.name} upgraded. Development level ${cityLevel}`)}],
+ ['Close',hidePanel]
+ ]);
+}
+
+/* ---------- Movement and interactions ---------- */
+const keys={};let yaw=0,pitch=.22,cameraMode=2,mouseDown=false,lastMouseX=0,lastMouseY=0;
+let inCar=false,activeInteractive=null,speed=8.5;
+window.addEventListener('keydown',e=>{
+ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
+ keys[e.key.toLowerCase()]=true;if(e.repeat)return;
+ const k=e.key.toLowerCase();
+ if(k==='v'){cameraMode=cameraMode===2?1:2;document.getElementById('cameraBtn').textContent='Camera: '+(cameraMode===2?'Third Person':'First Person')}
+ if(k==='c')callCar();if(k==='f')toggleCar();if(k==='g')startCarTo(document.getElementById('destination').value);
+ if(k==='escape'){
+  if(laptopOpen){document.getElementById('closeLaptop').click();return}
+  if(roomMode){leaveRoom();return}
+  entryScreen.style.display='none';hidePanel();
+ }
+ if(k==='e'||k==='o')interact();
+});
+window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+renderer.domElement.addEventListener('pointerdown',e=>{mouseDown=true;lastMouseX=e.clientX;lastMouseY=e.clientY});
+window.addEventListener('pointerup',()=>mouseDown=false);
+window.addEventListener('pointermove',e=>{
+ if(!mouseDown||entryScreen.style.display==='flex'||laptopOpen)return;
+ const dx=e.clientX-lastMouseX,dy=e.clientY-lastMouseY;lastMouseX=e.clientX;lastMouseY=e.clientY;
+ yaw-=dx*.004;pitch=THREE.MathUtils.clamp(pitch+dy*.002,-.25,.8);
+});
+function callCar(){
+ if(carMode==='away'||carMode==='leaving'){car.position.set(150,0,150);car.visible=true;carMode='parked'}
+ startCarTo(roomBuilding||'mansion');
+}
+function toggleCar(){
+ if(inCar){inCar=false;player.visible=true;player.position.set(car.position.x+3,0,car.position.z);toast('You stepped out of the limousine.');return}
+ if(Math.hypot(player.position.x-car.position.x,player.position.z-car.position.z)<5&&carMode==='parked'){
+  inCar=true;player.visible=false;toast('You are travelling as a passenger.');
+ }else toast('Move closer to your limousine to enter.');
+}
+function findNearest(){
+ if(roomMode){
+  let best=null,bd=999;
+  for(const item of roomFurniture){
+   const d=Math.hypot(player.position.x-item.x,player.position.z-item.z);
+   const range=item.kind==='laptop'?3.4:2.5;
+   if(d<range&&d<bd){bd=d;best=item}
+  }
+  if(best)return {prompt:best.kind==='laptop'?'[E] Open executive laptop':best.kind==='desk'?'[E] Use executive desk':'[E] Sit / stand',action:()=>{
+   if(best.kind==='laptop'){openLaptop();return}
+   if(best.kind==='desk'){sitting=true;player.position.set(0,0,-.1);player.rotation.y=Math.PI;toast('You are seated at your desk. Walk to the laptop and press E.');return}
+   sitting=!sitting;toast(sitting?'You sat down.':'You stood up.');
+  }};
+  const exitDist=Math.hypot(player.position.x,player.position.z-14);
+  if(exitDist<4)return {prompt:'[E] Exit room',action:leaveRoom};
+  return null;
+ }
+ let best=null,bd=999;
+ for(const door of doors){
+  const p=door.pivot.getWorldPosition(new THREE.Vector3());
+  const d=Math.hypot(player.position.x-p.x,player.position.z-p.z);
+  if(d<5&&d<bd){bd=d;best={door,action:door.action,prompt:'[E] / [O] Open building entrance'}}
+ }
+ return best;
+}
+function interact(){
+ if(laptopOpen)return;
+ if(entryScreen.style.display==='flex'){return}
+ if(panel.style.display==='block'){hidePanel();return}
+ if(roomMode){const near=findNearest();if(near){near.action();return}toast('Move closer to the desk, laptop or exit.');return}
+ const near=findNearest();if(near){near.action();return}
+ if(Math.hypot(player.position.x-car.position.x,player.position.z-car.position.z)<5){toggleCar();return}
+ toast('Nothing nearby. Move closer to a building door or your car.');
+}
+function collides(x,z){
+ if(roomMode)return false;
+ for(const b of Object.values(buildings)){
+  const lx=x-b.x,lz=z-b.z;
+  if(Math.abs(lx)<b.w/2+.7&&Math.abs(lz)<b.d/2+.7){
+   if(lz>b.d/2-2.5&&Math.abs(lx)<2.8)return false;
+   if(Math.abs(lx)<b.w/2-.8&&Math.abs(lz)<b.d/2-.8)return false;
+   return true;
+  }
+ }
+ return false;
+}
+function moveToward(obj,target,dt,run=6){
+ const dx=target.x-obj.position.x,dz=target.z-obj.position.z,dist=Math.hypot(dx,dz);
+ if(dist>.7){const step=Math.min(dist,run*dt);obj.position.x+=dx/dist*step;obj.position.z+=dz/dist*step;obj.rotation.y=Math.atan2(dx,dz)}
+}
+function updateGuards(dt){
+ if(roomMode||inCar)return;
+ if(guardMode==='dismiss'){guards.forEach((g,i)=>moveToward(g,new THREE.Vector3(-150,0,150+i*3),dt,5));return}
+ if(guardMode==='stay')return;
+ guards.forEach((g,i)=>{
+  const back=new THREE.Vector3(-Math.sin(yaw)*(4+i*2),0,-Math.cos(yaw)*(4+i*2));
+  const target=player.position.clone().add(back);
+  if(g.position.distanceTo(target)>2.2)moveToward(g,target,dt,6);
+ });
+}
+function updatePlayer(dt){
+ if(inCar||sitting||laptopOpen||entryScreen.style.display==='flex')return;
+ let dx=0,dz=0;
+ if(keys.arrowup||keys.w)dz-=1;if(keys.arrowdown||keys.s)dz+=1;
+ if(keys.arrowleft||keys.a)dx-=1;if(keys.arrowright||keys.d)dx+=1;
+ document.querySelectorAll('#mobilePad button').forEach(btn=>{
+  if(btn.dataset.pressed){if(btn.dataset.dir==='up')dz--;if(btn.dataset.dir==='down')dz++;if(btn.dataset.dir==='left')dx--;if(btn.dataset.dir==='right')dx++}
+ });
+ const len=Math.hypot(dx,dz);if(!len)return;dx/=len;dz/=len;
+ const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+ const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+ const move=forward.multiplyScalar(-dz).add(right.multiplyScalar(dx));
+ const v=speed*(keys.shift?1.55:1);
+ const nx=player.position.x+move.x*v*dt,nz=player.position.z+move.z*v*dt;
+ if(!collides(nx,player.position.z))player.position.x=nx;
+ if(!collides(player.position.x,nz))player.position.z=nz;
+ player.rotation.y=Math.atan2(move.x,move.z);
+}
+document.querySelectorAll('#mobilePad button').forEach(btn=>{
+ btn.addEventListener('pointerdown',e=>{e.preventDefault();btn.dataset.pressed='1'});
+ ['pointerup','pointerleave','pointercancel'].forEach(ev=>btn.addEventListener(ev,()=>delete btn.dataset.pressed));
+});
+
+function angleDifference(a,b){return Math.atan2(Math.sin(b-a),Math.cos(b-a))}
+function updateCar(dt){
+ if(carMode!=='driving'&&carMode!=='leaving')return;
+ if(carIndex>=carPath.length){
+  if(carMode==='leaving'){carMode='away';car.visible=false;toast('Your limousine has left.')}
+  else{carMode='parked';toast(`Your chauffeur has arrived at ${buildings[carTarget]?.name||'your destination'}.`)}
+  return;
+ }
+ const target=carPath[carIndex],dx=target.x-car.position.x,dz=target.z-car.position.z,dist=Math.hypot(dx,dz);
+ if(dist<2.2){carIndex++;return}
+ const desired=Math.atan2(dx,dz),turn=angleDifference(carHeading,desired);
+ carHeading+=THREE.MathUtils.clamp(turn,-dt*1.9,dt*1.9);
+ car.rotation.y=carHeading;
+ const step=Math.min(dist,carSpeed*Math.max(.25,Math.cos(turn))*dt);
+ car.position.x+=Math.sin(carHeading)*step;car.position.z+=Math.cos(carHeading)*step;
+ if(car.userData.wheels)for(const wheel of car.userData.wheels)wheel.rotation.x-=step/.53;
+}
+function updateInside(){
+ if(roomMode)return;
+ let inside=null;
+ for(const [id,b] of Object.entries(buildings)){
+  if(Math.abs(player.position.x-b.x)<b.w/2&&Math.abs(player.position.z-b.z)<b.d/2){inside=id;break}
+ }
+ for(const b of Object.values(buildings))b.roof.visible=b.id!==inside;
+}
+function updateCamera(){
+ const target=player.position.clone().add(new THREE.Vector3(0,1.7,0));
+ if(inCar)target.copy(car.position).add(new THREE.Vector3(0,2,0));
+ if(cameraMode===1){
+  camera.position.copy(target);
+  const dir=new THREE.Vector3(-Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch));
+  camera.lookAt(target.clone().add(dir.multiplyScalar(10)));
+ }else{
+  const offset=new THREE.Vector3(Math.sin(yaw)*9,3.8+pitch*3,Math.cos(yaw)*9);
+  camera.position.copy(target).add(offset);camera.lookAt(target);
+ }
+}
+function updatePrompt(){
+ if(laptopOpen||entryScreen.style.display==='flex'){promptEl.style.display='none';return}
+ activeInteractive=findNearest();
+ if(activeInteractive){promptEl.textContent=activeInteractive.prompt;promptEl.style.display='block'}
+ else promptEl.style.display='none';
+}
+
+/* City traffic */
+const traffic=[];
+for(let i=0;i<4;i++){
+ const v=new THREE.Group();
+ box(v,0,.75,0,3.6,.9,1.8,mat([0x9c3434,0x344e75,0x777777,0xd0b35a][i]));
+ for(const x of [-1.1,1.1])for(const z of [-.7,.7])cylinder(v,x,.35,z,.32,.32,.2,mat(0x111111),8).rotation.z=Math.PI/2;
+ v.position.set(-150+i*90,0,-30+(i%2)*4);scene.add(v);traffic.push(v);
+}
+function animateNPCs(dt,t){
+ if(roomMode)return;
+ npcs.forEach((n,i)=>{
+  if(n.userData.isPlayer||n.userData.isGuard||n.userData.isVehicleCrew)return;
+  const phase=t*.22+i*1.71;
+  n.position.x+=Math.sin(phase)*dt*.35;n.position.z+=Math.cos(phase)*dt*.35;
+ });
+}
+function updateRoomActors(dt,t){
+ if(!roomMode)return;
+ roomActors.forEach((a,i)=>{
+  /* Staff remain in their assigned positions during meetings and hearings. */
+  a.rotation.y=Math.sin(t*.3+i)*.025;
+ });
+}
+
+/* Topbar controls */
+document.getElementById('cameraBtn').onclick=()=>{
+ cameraMode=cameraMode===2?1:2;
+ document.getElementById('cameraBtn').textContent='Camera: '+(cameraMode===2?'Third Person':'First Person');
+};
+document.getElementById('callCar').onclick=callCar;
+document.getElementById('sendCar').onclick=sendCarAway;
+document.getElementById('travelBtn').onclick=()=>{
+ if(inCar)startCarTo(document.getElementById('destination').value);
+ else if(Math.hypot(player.position.x-car.position.x,player.position.z-car.position.z)<5&&carMode==='parked')toast('Board the limousine first.');
+ else callCar();
+};
+document.getElementById('carBtn').onclick=toggleCar;
+document.getElementById('guardBtn').onclick=guardPanel;
+document.getElementById('cityBtn').onclick=cityPanel;
+document.getElementById('fullBtn').onclick=()=>{
+ if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();
+};
+
+/* Start position and animation */
+player.position.set(mansion.x,0,mansion.z+5);
+camera.position.set(mansion.x+9,5,mansion.z+12);
+const clock=new THREE.Clock();let elapsed=0;
+function loop(){
+ requestAnimationFrame(loop);
+ const dt=Math.min(clock.getDelta(),.04);elapsed+=dt;
+ updatePlayer(dt);updateGuards(dt);updateCar(dt);updateInside();updateCamera();updatePrompt();
+ animateNPCs(dt,elapsed);updateRoomActors(dt,elapsed);
+ traffic.forEach((v,i)=>{
+  if(roomMode)return;
+  v.position.x+=dt*(i%2?7:-6);
+  if(v.position.x>165)v.position.x=-165;
+  if(v.position.x< -165)v.position.x=165;
+ });
+ const location=roomMode?(roomMode==='court'?'Courtroom':roomMode==='meeting'?'Meeting Room':'Private Cabin'):'City Streets';
+ document.getElementById('status').textContent=`City Level ${cityLevel} · ${location} · ${carMode==='away'?'Car away':carMode==='driving'?'Car travelling':'Car '+carMode}`;
+ renderer.render(scene,camera);
+}
+loop();
+
+window.__pvCityReady=true;
+document.getElementById('footerNote').textContent='Build 11 · 3D city ready';
+window.addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
