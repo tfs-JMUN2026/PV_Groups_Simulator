@@ -1,9 +1,10 @@
+
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>P.V Group Simulator — Build 09 Optimised</title>
+<title>P.V Group Simulator — Build 10</title>
 <style>
 :root{--glass:rgba(12,20,31,.92);--line:rgba(255,255,255,.18);--gold:#e8bd67;--text:#f4f7fb}
 *{box-sizing:border-box}
@@ -69,10 +70,9 @@ button:hover,select:hover{border-color:var(--gold)}
  <h1>Welcome to <span>P.V Group City</span></h1>
  <p>You are the owner of this city and founder of P.V Group. Explore your mansion, organisations and courthouse, meet your staff, manage your properties and travel with your chauffeur and security team.</p>
  <button id="startBtn">ENTER THE CITY</button>
- <div id="footerNote">Optimised Build 09 · Loading the 3D city…</div>
+ <div id="footerNote">Build 10 · Preparing the 3D city…</div>
 </div></div>
 
-<!-- Entry button works independently of the Three.js module -->
 <script>
 (()=>{
  const start=document.getElementById('start');
@@ -89,12 +89,12 @@ button:hover,select:hover{border-color:var(--gold)}
  });
  window.addEventListener('error',e=>{
   if(!window.__pvCityReady){
-   note.textContent='The 3D engine could not load. Check your internet connection and reload. '+(e.message||'');
+   note.textContent='Startup error: '+(e.message||'Unknown JavaScript error');
   }
  });
  window.addEventListener('unhandledrejection',e=>{
   if(!window.__pvCityReady){
-   note.textContent='The 3D city could not start. Check your internet connection and reload.';
+   note.textContent='Startup error: '+(e.reason?.message||'A module operation failed');
   }
  });
 })();
@@ -109,7 +109,6 @@ scene.background=new THREE.Color(0x9bb9cf);
 scene.fog=new THREE.Fog(0x9bb9cf,150,430);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,700);
 
-/* PERFORMANCE SETTINGS */
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
 renderer.setSize(innerWidth,innerHeight);
@@ -164,7 +163,6 @@ function label(text,x,y,z,color='#ffffff',size=2){
 }
 box(scene,0,-.7,0,430,1,430,mats.grass);
 
-/* CITY ROADS — fewer road markings and street fixtures */
 const roadXs=[-150,-90,-30,30,90,150],roadZs=[-150,-90,-30,30,90,150];
 const roadMark=mat(0xe8e0b9),crossMark=mat(0xe7e4d7);
 for(const x of roadXs){
@@ -182,7 +180,6 @@ for(const z of roadZs){
 for(const x of roadXs)for(const z of roadZs){
  for(let i=-2;i<=2;i++)box(scene,x+i*2,.09,z+8,.8,.035,1.6,crossMark);
 }
-/* Fewer lamps, with no costly point light at every pole */
 for(let x=-150;x<=150;x+=60)for(let z=-150;z<=150;z+=60){
  cylinder(scene,x,.2,z,.28,.38,.4,mat(0x777d80));
  box(scene,x,3.1,z,.16,6,.16,mat(0x535b60));
@@ -190,7 +187,6 @@ for(let x=-150;x<=150;x+=60)for(let z=-150;z<=150;z+=60){
  box(scene,x+.7,5.55,z,.32,.12,.32,mat(0xffe7b0));
 }
 
-/* Trees */
 const treeTrunk=mat(0x705035),leafMats=[mat(0x4b8750),mat(0x3d7747)];
 function tree(x,z,s=1){
  const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
@@ -283,10 +279,7 @@ const associates=makeBuilding('associates','P.V ASSOCIATES',60,120,32,26,13,0xc9
 const court=makeBuilding('court','P.V ASSOCIATES COURT',120,-60,38,32,15,0xd8d0c1);
 const veda=makeBuilding('veda','VEDA PATASHALA',-120,-120,32,28,9,0xd7bd91);
 
-/* INTERIOR DETAIL — fewer dynamic lights */
-function ceilingLight(g,x,y,z){
- box(g,x,y,z,.8,.12,.8,mat(0xe7dfc9,.4));
-}
+function ceilingLight(g,x,y,z){box(g,x,y,z,.8,.12,.8,mat(0xe7dfc9,.4))}
 function rug(g,x,z,w,d,color=0x7c3333){
  box(g,x,.29,z,w,.08,d,mat(color));
  box(g,x,.34,z,w-.45,.025,d-.45,mat(0xb99a70));
@@ -368,7 +361,6 @@ function addInteriorDetails(b){
 }
 Object.values(buildings).forEach(addInteriorDetails);
 
-/* SCHOOL SPORTS GROUNDS */
 function field(x,z,w,d,color=0x43864c){
  box(scene,x,.02,z,w,.1,d,mat(color));
  for(let i=0;i<2;i++){
@@ -385,7 +377,6 @@ label('SPORTS COMPLEX',120,3,89,'#fff',1.3);
 box(scene,-60,.2,143,24,.4,10,mat(0xeeeeea));
 label('EMERGENCY',-60,3,149,'#d84c4c',1.1);
 
-/* COURTHOUSE EXTERIOR */
 const courtExterior=new THREE.Group();courtExterior.position.set(court.x,0,court.z);scene.add(courtExterior);
 const stone=mat(0xd9d0bd),columnStone=mat(0xe8dfcd),courtDark=mat(0x483b31);
 for(let i=0;i<7;i++){
@@ -402,14 +393,16 @@ for(let i=0;i<5;i++)box(courtExterior,0,.35+i*.42,21,31-i*2,.65,4,mat(0xb9af9d))
 box(courtExterior,0,3.1,18.9,15,.35,.5,mat(0x6b5540));
 label('P.V ASSOCIATES COURT',court.x,19,court.z+18,'#fff0cb',1.5);
 
-/* FORMAL COURTROOM */
+/* COURTROOM MATERIAL FIX:
+   courtPanelMat is the courtroom wood-panel material.
+   courtPanel() remains the courtroom interaction function. */
 const courtRoom=new THREE.Group();courtRoom.position.set(court.x,0,court.z);court.interior.add(courtRoom);
-const courtWood=mat(0x4a3024),courtPanel=mat(0x684733),courtCarpet=mat(0x6c252b);
+const courtWood=mat(0x4a3024),courtPanelMat=mat(0x684733),courtCarpet=mat(0x6c252b);
 box(courtRoom,0,.32,0,34,.12,28,courtCarpet);
 box(courtRoom,0,.4,0,32,.08,26,mat(0x6f292d));
 for(let x=-16;x<=16;x+=8){
  box(courtRoom,x,2.1,-15,.22,4,.22,mat(0x493a30));
- box(courtRoom,x,1,-14.82,3.8,1.9,.18,courtPanel);
+ box(courtRoom,x,1,-14.82,3.8,1.9,.18,courtPanelMat);
 }
 for(let z=-12;z<=13;z+=5){
  box(courtRoom,-18,2,z,.2,3,.2,mat(0x493a30));
@@ -418,7 +411,7 @@ for(let z=-12;z<=13;z+=5){
 for(let i=0;i<6;i++){
  const x=-14+i*5.6;
  box(courtRoom,x,7,-15,3.5,.35,.5,courtWood);
- box(courtRoom,x,5.5,-15,3.5,2.5,.3,courtPanel);
+ box(courtRoom,x,5.5,-15,3.5,2.5,.3,courtPanelMat);
 }
 rug(courtRoom,0,0,27,22,0x70272d);
 for(let i=0;i<3;i++)box(courtRoom,0,.35+i*.42,-10,17-i*1.5,.7,5,mat(0x75624e));
@@ -458,14 +451,12 @@ for(let row=0;row<3;row++){
  for(let i=0;i<6;i++){
   const x=-13+i*5;
   box(courtRoom,x,.65+row*.12,z,3.3,.28,1.1,courtWood);
-  box(courtRoom,x,.95+row*.12,z-.38,3.3,.65,.2,courtPanel);
+  box(courtRoom,x,.95+row*.12,z-.38,3.3,.65,.2,courtPanelMat);
   chair(courtRoom,x,z+.35,0x53463b);
  }
 }
 label('PUBLIC GALLERY',court.x,4,court.z+16,'#fff',.75);
-for(const x of [-12,0,12]){
- cylinder(courtRoom,x,8,0,.25,.25,.2,mat(0x8a744d));
-}
+for(const x of [-12,0,12])cylinder(courtRoom,x,8,0,.25,.25,.2,mat(0x8a744d));
 box(courtRoom,-17,4,0,.2,4,.2,mat(0x8c754c));
 sphere(courtRoom,-17,6,0,.45,mat(0xeee4ce));
 box(courtRoom,17,4,0,.2,4,.2,mat(0x8c3030));
@@ -474,7 +465,6 @@ bookcase(courtRoom,-15,11,3);bookcase(courtRoom,15,11,3);
 box(courtRoom,-14,.6,14,4,1.1,1.2,mat(0x49382d));
 box(courtRoom,14,.6,14,4,1.1,1.2,mat(0x49382d));
 
-/* INTERACTABLE WORKSTATIONS */
 function addInteractable(parent,x,y,z,range,prompt,action){
  const obj=new THREE.Group();obj.position.set(x,y,z);parent.add(obj);
  interactives.push({object:obj,range,prompt,action});return obj;
@@ -499,7 +489,6 @@ for(const b of [mansion,industries,schools,hospitals,associates,veda]){
 }
 addDesk(courtRoom,9,-2,'Advocate table');
 
-/* PEOPLE — reduced background population for smoother performance */
 const npcs=[],skinTones=[0x9b6749,0xb77e5b,0x754b37,0xd19a73],clothes=[0x253b5d,0x7c3838,0x315b49,0x78633e,0x4a506b];
 function makePerson(x,z,role='Resident',isGuard=false,isPlayer=false){
  const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
@@ -529,7 +518,6 @@ for(let i=0;i<20;i++){
 }
 for(let i=0;i<10;i++)makePerson(105+Math.random()*28,48+Math.random()*24,'Student');
 
-/* CHAUFFEUR LIMOUSINE */
 const car=new THREE.Group();scene.add(car);
 const carBody=mat(0x111b29,.27,.65),chrome=mat(0xb9c4ca,.25,.8),rubber=mat(0x111315,.95);
 box(car,0,1,0,2.35,1.25,6.1,carBody);
@@ -556,7 +544,6 @@ box(car,0,2.34,-.15,1.8,.08,3.2,mat(0x101923));
 const driver=makePerson(0,0,'Chauffeur');driver.scale.set(.42,.48,.42);driver.position.set(0,.62,-.5);driver.userData.isVehicleCrew=true;car.add(driver);
 car.position.set(-120,0,-48);
 
-/* ROAD ROUTING */
 const graph=new Map();
 function nodeKey(x,z){return `${x},${z}`}
 for(const x of roadXs)for(const z of roadZs)graph.set(nodeKey(x,z),{x,z,edges:[]});
@@ -610,7 +597,6 @@ function sendCarAway(){
  toast('Your chauffeur is taking the car away.');
 }
 
-/* CITY OWNER PANEL */
 let cityLevel=1;
 function cityPanel(){
  showPanel('City Owner',`You own this city. Current development level: ${cityLevel}. Improve public spaces and expand services.`,[
@@ -628,7 +614,6 @@ function cityPanel(){
  ]);
 }
 
-/* FICTIONAL COURT CASE SYSTEM */
 const cases=[
  {title:'Case 001 — Water Supply Society',summary:'A fictional dispute concerning interrupted water supply and civic responsibility.'},
  {title:'Case 002/2026 — Medical Negligence',summary:'A fictional medical negligence matter involving P.V. Hospitals.'},
@@ -648,7 +633,6 @@ function courtPanel(){
  ]);
 }
 
-/* UI HELPERS */
 const panel=document.getElementById('panel'),promptEl=document.getElementById('prompt'),toastEl=document.getElementById('toast');
 let toastTimer;
 function toast(s){toastEl.textContent=s;toastEl.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.style.display='none',2600)}
@@ -678,7 +662,6 @@ function buildingPanel(id){
  ]);
 }
 
-/* PLAYER AND CAMERA */
 const keys={};let yaw=0,pitch=.22,cameraMode=2,mouseDown=false,lastMouseX=0,lastMouseY=0;
 let guardMode='follow',inCar=false,sitting=false,insideBuilding=null,activeInteractive=null,speed=8.5;
 window.addEventListener('keydown',e=>{
@@ -773,7 +756,6 @@ document.querySelectorAll('#mobilePad button').forEach(btn=>{
  ['pointerup','pointerleave','pointercancel'].forEach(ev=>btn.addEventListener(ev,()=>delete btn.dataset.pressed));
 });
 
-/* CHAUFFEUR CAR MOVEMENT */
 function angleDifference(a,b){return Math.atan2(Math.sin(b-a),Math.cos(b-a))}
 function updateCar(dt){
  if(carMode!=='driving'&&carMode!=='leaving')return;
@@ -796,7 +778,6 @@ function updateCar(dt){
  if(car.userData.wheels)for(const wheel of car.userData.wheels)wheel.rotation.x-=step/.53;
 }
 
-/* CAMERA AND PROMPTS */
 function updateInside(){
  insideBuilding=null;
  for(const [id,b] of Object.entries(buildings)){
@@ -824,7 +805,6 @@ function updatePrompt(){
  }else promptEl.style.display='none';
 }
 
-/* TRAFFIC — fewer moving vehicles */
 const traffic=[];
 for(let i=0;i<4;i++){
  const v=new THREE.Group();
@@ -840,10 +820,6 @@ function animateNPCs(dt,t){
  });
 }
 
-/* BUTTONS */
-document.getElementById('startBtn').addEventListener('click',()=>{
- if(window.__pvCityReady){toast('Welcome, City Owner. Your city is ready to explore.');updateCamera()}
-});
 document.getElementById('cameraBtn').onclick=()=>{
  cameraMode=cameraMode===2?1:2;
  document.getElementById('cameraBtn').textContent='Camera: '+(cameraMode===2?'Third Person':'First Person');
@@ -862,7 +838,6 @@ document.getElementById('fullBtn').onclick=()=>{
  if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();
 };
 
-/* STARTUP */
 player.position.set(mansion.x,0,mansion.z+5);
 camera.position.set(mansion.x+9,5,mansion.z+12);
 const clock=new THREE.Clock();let elapsed=0;
@@ -880,7 +855,7 @@ function loop(){
 }
 loop();
 window.__pvCityReady=true;
-document.getElementById('footerNote').textContent='Optimised Build 09 · 3D city ready';
+document.getElementById('footerNote').textContent='Build 10 · 3D city ready';
 window.addEventListener('resize',()=>{
  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
 });
