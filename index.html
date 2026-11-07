@@ -1,0 +1,891 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>P.V Group Simulator — Build 09 Optimised</title>
+<style>
+:root{--glass:rgba(12,20,31,.92);--line:rgba(255,255,255,.18);--gold:#e8bd67;--text:#f4f7fb}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111;font-family:Segoe UI,Arial,sans-serif;color:var(--text)}
+#game{position:fixed;inset:0}canvas{display:block}
+button,select{font:inherit;color:var(--text);background:rgba(20,31,45,.96);border:1px solid var(--line);border-radius:9px;padding:9px 12px;cursor:pointer}
+button:hover,select:hover{border-color:var(--gold)}
+#topbar{position:fixed;top:12px;left:12px;right:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;z-index:5;pointer-events:none}
+#topbar>*{pointer-events:auto}
+#brand,#status{background:var(--glass);border:1px solid var(--line);border-radius:10px;padding:10px 13px}
+#brand{font-weight:800}#brand span{color:var(--gold)}
+#status{margin-left:auto;font-size:13px}
+#help{position:fixed;left:12px;bottom:12px;max-width:340px;padding:11px 13px;background:var(--glass);border:1px solid var(--line);border-radius:10px;font-size:12px;line-height:1.55;z-index:5}
+#prompt{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#080d14ed;border:1px solid var(--gold);border-radius:10px;padding:12px 18px;z-index:7;font-weight:700;display:none;white-space:nowrap}
+#toast{position:fixed;left:50%;top:88px;transform:translateX(-50%);background:var(--glass);border:1px solid var(--line);padding:10px 15px;border-radius:9px;z-index:10;display:none}
+#panel{position:fixed;right:14px;top:82px;width:min(360px,calc(100vw - 28px));max-height:70vh;overflow:auto;background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:15px;z-index:8;display:none;box-shadow:0 12px 40px #0008}
+#panel h2{font-size:18px;margin:0 0 10px;color:var(--gold)}
+#panel p{font-size:13px;line-height:1.5;color:#d8e0ea}
+#panel .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+#panel button{font-size:12px}#panel select{width:100%;margin:5px 0 9px}
+#panel .close{float:right}
+#crosshair{position:fixed;left:50%;top:50%;width:5px;height:5px;border-radius:50%;background:#fff9;pointer-events:none;z-index:3}
+#mobilePad{position:fixed;right:14px;bottom:14px;display:grid;grid-template-columns:44px 44px 44px;grid-template-rows:44px 44px;gap:4px;z-index:6;opacity:.7}
+#mobilePad button{padding:0;font-size:18px}
+#mobilePad button:nth-child(1){grid-column:2}
+#mobilePad button:nth-child(2){grid-column:1;grid-row:2}
+#mobilePad button:nth-child(3){grid-column:2;grid-row:2}
+#mobilePad button:nth-child(4){grid-column:3;grid-row:2}
+#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(120deg,#0b1726dd,#18283add),radial-gradient(circle at 50% 40%,#456 0,#101820 70%);z-index:20;text-align:center;padding:22px}
+#start .card{max-width:560px;background:#0b1524ed;border:1px solid #ffffff25;border-radius:18px;padding:28px;box-shadow:0 20px 70px #0009}
+#start h1{margin:0 0 8px;font-size:clamp(26px,5vw,42px)}
+#start h1 span{color:var(--gold)}
+#start p{color:#d0d9e4;line-height:1.6}
+#start button{background:#9d7131;color:#fff;border:0;padding:13px 24px;font-weight:800}
+#footerNote{font-size:11px;color:#aeb9c6;margin-top:12px}
+@media(max-width:650px){#status{margin-left:0}#help{max-width:250px;font-size:11px}#topbar{gap:5px}#topbar button,#topbar select{padding:7px;font-size:11px}#brand{font-size:12px}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}
+</script>
+</head>
+<body>
+<div id="game"></div><div id="crosshair"></div>
+<div id="topbar">
+ <div id="brand">P.V <span>GROUP</span> CITY</div>
+ <button id="cameraBtn">Camera: Third Person</button>
+ <button id="callCar">Call Car</button>
+ <button id="sendCar">Send Car Away</button>
+ <select id="destination">
+  <option value="mansion">Mansion</option><option value="industries">P.V Industries</option>
+  <option value="schools">P.V Schools</option><option value="hospitals">P.V Hospitals</option>
+  <option value="associates">P.V Associates</option><option value="court">P.V Associates Court</option>
+  <option value="veda">Veda Patashala</option>
+ </select>
+ <button id="travelBtn">Travel</button><button id="carBtn">Enter / Exit Car</button>
+ <button id="guardBtn">Security</button><button id="cityBtn">City Owner</button>
+ <button id="fullBtn">Full Screen</button><div id="status">Loading city…</div>
+</div>
+<div id="help"><b>CONTROLS</b><br>Arrow keys / WASD: move · Mouse drag: look around<br>Shift: run · E / O: interact · F: enter/exit car<br>V: change camera · C: call car · G: travel<br><span style="color:#e8bd67">Walk close to doors, furniture and people to interact.</span></div>
+<div id="prompt"></div><div id="toast"></div><div id="panel"></div>
+<div id="mobilePad"><button data-dir="up">↑</button><button data-dir="left">←</button><button data-dir="down">↓</button><button data-dir="right">→</button></div>
+<div id="start"><div class="card">
+ <h1>Welcome to <span>P.V Group City</span></h1>
+ <p>You are the owner of this city and founder of P.V Group. Explore your mansion, organisations and courthouse, meet your staff, manage your properties and travel with your chauffeur and security team.</p>
+ <button id="startBtn">ENTER THE CITY</button>
+ <div id="footerNote">Optimised Build 09 · Loading the 3D city…</div>
+</div></div>
+
+<!-- Entry button works independently of the Three.js module -->
+<script>
+(()=>{
+ const start=document.getElementById('start');
+ const note=document.getElementById('footerNote');
+ const status=document.getElementById('status');
+ document.getElementById('startBtn').addEventListener('click',()=>{
+  if(!window.__pvCityReady){
+   note.textContent='The city is still loading. Please wait a little longer.';
+   return;
+  }
+  start.style.display='none';
+  status.textContent='City ready';
+  window.dispatchEvent(new Event('pv-enter-city'));
+ });
+ window.addEventListener('error',e=>{
+  if(!window.__pvCityReady){
+   note.textContent='The 3D engine could not load. Check your internet connection and reload. '+(e.message||'');
+  }
+ });
+ window.addEventListener('unhandledrejection',e=>{
+  if(!window.__pvCityReady){
+   note.textContent='The 3D city could not start. Check your internet connection and reload.';
+  }
+ });
+})();
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+const mount=document.getElementById('game');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9bb9cf);
+scene.fog=new THREE.Fog(0x9bb9cf,150,430);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,700);
+
+/* PERFORMANCE SETTINGS */
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=false;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.05;
+mount.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xe5f3ff,0x65715a,2));
+const sun=new THREE.DirectionalLight(0xffedcf,2.1);
+sun.position.set(-90,150,80);
+scene.add(sun);
+
+const mats={
+ grass:new THREE.MeshStandardMaterial({color:0x6b9562}),
+ road:new THREE.MeshStandardMaterial({color:0x343a40,roughness:.94}),
+ side:new THREE.MeshStandardMaterial({color:0xbab9aa}),
+ white:new THREE.MeshStandardMaterial({color:0xe9e5d9}),
+ glass:new THREE.MeshStandardMaterial({color:0x6fa4bd,metalness:.25,roughness:.2}),
+ darkGlass:new THREE.MeshStandardMaterial({color:0x24495c,metalness:.2,roughness:.3}),
+ gold:new THREE.MeshStandardMaterial({color:0xc89a48,metalness:.4,roughness:.4}),
+ wood:new THREE.MeshStandardMaterial({color:0x795338}),
+ floor:new THREE.MeshStandardMaterial({color:0xc9c2b4}),
+ wall:new THREE.MeshStandardMaterial({color:0xe7e2d7}),
+ red:new THREE.MeshStandardMaterial({color:0x9e3535}),
+ blue:new THREE.MeshStandardMaterial({color:0x263d5b}),
+ green:new THREE.MeshStandardMaterial({color:0x42714b})
+};
+const mat=(c,r=.8,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+function box(parent,x,y,z,w,h,d,material,cast=false,receive=false){
+ const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+ o.position.set(x,y,z);o.castShadow=cast;o.receiveShadow=receive;parent.add(o);return o;
+}
+function cylinder(parent,x,y,z,rt,rb,h,material,seg=10){
+ const o=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),material);
+ o.position.set(x,y,z);parent.add(o);return o;
+}
+function sphere(parent,x,y,z,r,material){
+ const o=new THREE.Mesh(new THREE.SphereGeometry(r,12,8),material);
+ o.position.set(x,y,z);parent.add(o);return o;
+}
+function label(text,x,y,z,color='#ffffff',size=2){
+ const c=document.createElement('canvas'),ctx=c.getContext('2d');
+ c.width=512;c.height=128;ctx.clearRect(0,0,512,128);
+ ctx.font='bold 58px Arial';ctx.textAlign='center';
+ ctx.fillStyle='rgba(8,15,22,.7)';ctx.fillRect(12,15,488,98);
+ ctx.fillStyle=color;ctx.fillText(text,256,83);
+ const tex=new THREE.CanvasTexture(c);
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+ sp.position.set(x,y,z);sp.scale.set(size*3.6,size,.1);scene.add(sp);return sp;
+}
+box(scene,0,-.7,0,430,1,430,mats.grass);
+
+/* CITY ROADS — fewer road markings and street fixtures */
+const roadXs=[-150,-90,-30,30,90,150],roadZs=[-150,-90,-30,30,90,150];
+const roadMark=mat(0xe8e0b9),crossMark=mat(0xe7e4d7);
+for(const x of roadXs){
+ box(scene,x,.015,0,13,.08,330,mats.road);
+ box(scene,x+7,.04,0,1,.12,330,mats.side);
+ box(scene,x-7,.04,0,1,.12,330,mats.side);
+ for(let z=-150;z<=150;z+=36)box(scene,x,.07,z,.22,.03,7,roadMark);
+}
+for(const z of roadZs){
+ box(scene,0,.02,z,330,.08,13,mats.road);
+ box(scene,0,.04,z+7,330,.12,1,mats.side);
+ box(scene,0,.04,z-7,330,.12,1,mats.side);
+ for(let x=-150;x<=150;x+=36)box(scene,x,.07,z,7,.03,.22,roadMark);
+}
+for(const x of roadXs)for(const z of roadZs){
+ for(let i=-2;i<=2;i++)box(scene,x+i*2,.09,z+8,.8,.035,1.6,crossMark);
+}
+/* Fewer lamps, with no costly point light at every pole */
+for(let x=-150;x<=150;x+=60)for(let z=-150;z<=150;z+=60){
+ cylinder(scene,x,.2,z,.28,.38,.4,mat(0x777d80));
+ box(scene,x,3.1,z,.16,6,.16,mat(0x535b60));
+ box(scene,x+.7,5.8,z,.16,.12,1.4,mat(0x30383c));
+ box(scene,x+.7,5.55,z,.32,.12,.32,mat(0xffe7b0));
+}
+
+/* Trees */
+const treeTrunk=mat(0x705035),leafMats=[mat(0x4b8750),mat(0x3d7747)];
+function tree(x,z,s=1){
+ const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
+ cylinder(g,0,1.6,0,.28,.38,3.2,treeTrunk,8);
+ for(let i=0;i<3;i++){
+  const crown=new THREE.Mesh(new THREE.SphereGeometry(1.35-i*.15,9,7),leafMats[i%2]);
+  crown.position.set((i-1)*.35,3.3+i*.45,0);
+  crown.scale.set(1,1.1,1);g.add(crown);
+ }
+ g.scale.setScalar(s);
+}
+for(let i=0;i<30;i++){
+ const x=(Math.random()-.5)*360,z=(Math.random()-.5)*360;
+ if(roadXs.some(v=>Math.abs(x-v)<11)||roadZs.some(v=>Math.abs(z-v)<11))continue;
+ tree(x,z,.7+Math.random()*.5);
+}
+function park(x,z,w,d,name){
+ box(scene,x,.03,z,w,.12,d,mat(0x79a86a));
+ for(let i=0;i<5;i++)tree(x-w/2+5+i*(w-10)/4,z-d/2+5+(i%2)*(d-10),.8);
+ for(let i=0;i<3;i++)box(scene,x-4+i*4,.7,z+d/2-4,2,.35,.6,mats.wood);
+ label(name,x,4,z-d/2+3,'#fff',1.6);
+}
+park(-120,120,48,42,'CENTRAL PARK');
+park(120,-120,42,48,'RIVER GARDENS');
+
+const buildings={},interactives=[],doors=[];
+function furniture(g,x,y,z,w,d,h,color=0x795338){
+ return box(g,x,y+h/2,z,w,h,d,mat(color));
+}
+function makeDoor(g,x,z,rot=0){
+ const pivot=new THREE.Group();pivot.position.set(x,0,z);pivot.rotation.y=rot;g.add(pivot);
+ box(pivot,.52,1.45,0,1.04,2.9,.16,mat(0x68452e));
+ sphere(pivot,.88,1.45,.11,.09,mat(0xd4b15e));
+ const door={pivot,open:false,action(){
+  door.open=!door.open;
+  pivot.rotation.y=rot+(door.open?Math.PI/2:0);
+  toast(door.open?'Door opened':'Door closed');
+ }};
+ interactives.push({object:pivot,range:3.3,action:door.action,prompt:()=>`[E] / [O] ${door.open?'Close':'Open'} door`,door});
+ doors.push(door);return door;
+}
+function makeBuilding(id,name,x,z,w,d,height,wallColor,style='office'){
+ const root=new THREE.Group();root.position.set(x,0,z);scene.add(root);
+ const shell=new THREE.Group(),interior=new THREE.Group(),roof=new THREE.Group();
+ root.add(shell,interior,roof);
+ const wallmat=mat(wallColor),trim=mat(0xddd7ca),win=mats.darkGlass;
+ box(shell,0,.18,0,w,.36,d,mats.side);
+ box(interior,0,.16,0,w-.5,.22,d-.5,mat(0xc9c1b2));
+ box(shell,-w/2+.18,height/2,0,.36,height,d,wallmat);
+ box(shell,w/2-.18,height/2,0,.36,height,d,wallmat);
+ box(shell,0,height/2,-d/2+.18,w,height,.36,wallmat);
+ box(shell,-w*.27,height/2,d/2-.18,w*.46,height,.36,wallmat);
+ box(shell,w*.34,height/2,d/2-.18,w*.32,height,.36,wallmat);
+ for(let y=2.2;y<height-1;y+=3.2){
+  for(const side of [-1,1]){
+   box(shell,side*(w/2-.1),y,0,.08,1.35,d*.72,win);
+   for(let zz=-d*.3;zz<=d*.3;zz+=4)box(shell,side*(w/2-.03),y,zz,.14,1.5,.12,trim);
+  }
+  box(shell,0,y,-d/2+.1,w*.68,1.3,.09,win);
+ }
+ box(roof,0,height+.25,0,w+.8,.5,d+.8,mat(style==='home'?0x373f4a:0x536273));
+ for(let yy=0;yy<height;yy+=4.5)box(shell,0,yy+.15,d/2+.02,w*.9,.18,.18,mats.gold);
+ furniture(interior,0,.65,-d*.24,5,2.2,1.3,0x6d4a32);
+ box(interior,0,1.5,-d*.24,4.6,.15,1.9,mat(0x9c7650));
+ for(const zz of [-d*.31,d*.05]){
+  box(interior,-w*.23,1.3,zz,3.8,2.5,.18,mat(0xd8d2c6));
+  box(interior,w*.23,1.3,zz,3.8,2.5,.18,mat(0xd8d2c6));
+ }
+ box(interior,-w*.19,1.25,0,.18,2.5,d*.44,mat(0xd8d2c6));
+ box(interior,w*.19,1.25,0,.18,2.5,d*.44,mat(0xd8d2c6));
+ for(let i=0;i<4;i++){
+  const xx=-w*.3+i*w*.2;
+  furniture(interior,xx,.55,d*.22,1.2,1.2,.9,0x35475a);
+  sphere(interior,xx,.95,d*.22,.28,mat(0x343b42));
+ }
+ if(height>7){
+  for(let i=0;i<5;i++)box(interior,-w*.34+i*.7,.18+i*.4,-d*.35,2.2,.35,2.5,mat(0xb8b1a5));
+  box(interior,0,height*.52,-d*.12,w*.8,.22,d*.65,mat(0xc7c1b6));
+ }
+ makeDoor(root,-.5,d/2+.12,0);
+ const sign=label(name,x,height+4,z+d/2+2,'#f8e5b8',1.8);
+ const b={id,name,x,z,w,d,height,root,shell,interior,roof,sign,entrance:new THREE.Vector3(x,0,z+d/2+4)};
+ buildings[id]=b;return b;
+}
+const mansion=makeBuilding('mansion','P.V RESIDENCE',-120,-60,34,28,10,0xd8c7ad,'home');
+const industries=makeBuilding('industries','P.V INDUSTRIES',60,-120,34,26,20,0xc5d0d7);
+const schools=makeBuilding('schools','P.V SCHOOLS',120,60,46,34,14,0xd6d1c2);
+const hospitals=makeBuilding('hospitals','P.V HOSPITALS',-60,120,40,30,17,0xdce5e7);
+const associates=makeBuilding('associates','P.V ASSOCIATES',60,120,32,26,13,0xc9c6c1);
+const court=makeBuilding('court','P.V ASSOCIATES COURT',120,-60,38,32,15,0xd8d0c1);
+const veda=makeBuilding('veda','VEDA PATASHALA',-120,-120,32,28,9,0xd7bd91);
+
+/* INTERIOR DETAIL — fewer dynamic lights */
+function ceilingLight(g,x,y,z){
+ box(g,x,y,z,.8,.12,.8,mat(0xe7dfc9,.4));
+}
+function rug(g,x,z,w,d,color=0x7c3333){
+ box(g,x,.29,z,w,.08,d,mat(color));
+ box(g,x,.34,z,w-.45,.025,d-.45,mat(0xb99a70));
+}
+function sofa(g,x,z,color=0x455c69){
+ box(g,x,.65,z,3.4,.7,1.1,mat(color));
+ box(g,x,.98,z-.43,3.4,.5,.25,mat(color));
+ for(const dx of [-1.25,0,1.25])box(g,x+dx,1.04,z-.02,.75,.45,.85,mat(color));
+}
+function chair(g,x,z,color=0x4d5964){
+ box(g,x,.55,z,.85,.18,.85,mat(0x60452f));
+ box(g,x,.95,z-.34,.85,.8,.14,mat(color));
+ for(const dx of [-.32,.32])for(const dz of [-.32,.32])box(g,x+dx,.25,z+dz,.09,.55,.09,mat(0x49372a));
+}
+function bookcase(g,x,z,w=3){
+ box(g,x,1.5,z,w,3,.4,mat(0x593b29));
+ for(let y=.65;y<2.8;y+=.72){
+  box(g,x,y,z+.23,w-.15,.08,.12,mat(0x9b7650));
+  for(let i=0;i<5;i++){
+   const colors=[0x8b3434,0x324e72,0x9a773e,0x42644c,0x6d4c79];
+   box(g,x-w*.42+i*w*.18,y+.25,z+.12,.22,.42,.22,mat(colors[i%5]));
+  }
+ }
+}
+function plant(g,x,z){
+ cylinder(g,x,.45,z,.38,.28,.8,mat(0x8b5b36));
+ for(let i=0;i<4;i++){
+  const leaf=sphere(g,x+Math.sin(i*1.5)*.28,1.05,z+Math.cos(i*1.5)*.28,.3,mat(0x397344));
+  leaf.scale.set(.65,1.5,.65);
+ }
+}
+function addInteriorDetails(b){
+ const g=b.interior,w=b.w,d=b.d;
+ for(const side of [-1,1]){
+  box(g,side*(w/2-.8),.48,0,.12,.18,d-1,mat(0x8a7966));
+  box(g,side*(w/2-.8),b.height-.8,0,.18,.18,d-1,mat(0xc7bca9));
+ }
+ for(let x=-w/2+3;x<w/2-2;x+=9)ceilingLight(g,x,Math.min(b.height-1,7),0);
+ if(b.id==='mansion'){
+  rug(g,-8,-6,10,7,0x743b36);sofa(g,-8,-6);sofa(g,-8,-9,0x53616a);
+  box(g,-8,.65,-2,2.2,.5,1.2,mat(0x795538));
+  rug(g,8,-6,9,7,0x485d70);
+  box(g,8,.75,-6,5,.18,2.4,mat(0x795538));
+  for(let i=0;i<4;i++)chair(g,6+i%2*2,-8+Math.floor(i/2)*3);
+  rug(g,-8,6,9,7,0x546a55);bookcase(g,-13,3,3);bookcase(g,-3,3,3);
+  rug(g,8,6,9,7,0x624a3d);box(g,8,.8,6,4,.18,2.2,mat(0x513b2c));
+  chair(g,8,8,0x283d55);plant(g,14,10);plant(g,-14,-10);
+ }else if(b.id==='schools'||b.id==='veda'){
+  bookcase(g,-w*.3,-d*.2,4);
+  for(let row=0;row<3;row++)for(let col=0;col<3;col++){
+   const x=-w*.2+col*4,z=-d*.05+row*3.1;
+   box(g,x,.65,z,2.2,.16,1.1,mat(0x9a7047));chair(g,x,.0,z+1,0x354d68);
+  }
+  box(g,0,1.7,-d*.34,7,2.5,.16,mat(0x31634d));
+  box(g,0,3,-d*.34,7,.12,.2,mat(0xd9d0b9));plant(g,w*.35,d*.3);
+ }else if(b.id==='hospitals'){
+  for(let i=0;i<3;i++){
+   const z=-d*.2+i*5;
+   box(g,-w*.2,1,z,4,.35,2.1,mat(0xe8e8e2));
+   box(g,-w*.2,1.35,z,3.7,.12,1.8,mat(0x9ab7c5));
+   box(g,-w*.2,1.8,z,3.5,.7,.12,mat(0xe8e8e2));
+   chair(g,w*.18,z,0x4d7180);
+  }
+  box(g,w*.2,1.5,-d*.32,4,2.8,.15,mat(0xe8e8e2));plant(g,w*.35,d*.3);
+ }else if(b.id==='industries'){
+  bookcase(g,-w*.34,-d*.2,4);box(g,0,.75,-d*.1,6,.18,3,mat(0x493c32));
+  for(let i=0;i<4;i++)chair(g,-4+i*2,2);
+  box(g,0,2,-d*.34,8,2.8,.18,mat(0x3d5262));plant(g,w*.34,d*.3);
+ }else if(b.id==='associates'){
+  bookcase(g,-w*.34,-d*.2,4);bookcase(g,w*.34,-d*.2,4);
+  for(let i=0;i<3;i++){
+   box(g,-4+i*4,.75,2,2.8,.18,1.5,mat(0x67472e));
+   chair(g,-4+i*4,3.4,0x374d63);
+  }
+ }else if(b.id==='court'){
+  bookcase(g,-w*.35,-d*.25,4);bookcase(g,w*.35,-d*.25,4);
+  plant(g,-w*.36,d*.32);plant(g,w*.36,d*.32);
+ }
+}
+Object.values(buildings).forEach(addInteriorDetails);
+
+/* SCHOOL SPORTS GROUNDS */
+function field(x,z,w,d,color=0x43864c){
+ box(scene,x,.02,z,w,.1,d,mat(color));
+ for(let i=0;i<2;i++){
+  box(scene,x-w/2+1+i*(w-2),.1,z,.12,.04,d-2,mat(0xf2f2e8));
+  box(scene,x,.1,z-d/2+1+i*(d-2),w-2,.04,.12,mat(0xf2f2e8));
+ }
+}
+field(120,105,42,24);field(166,70,24,30,0x5b9a53);
+for(let i=0;i<24;i++){
+ const a=i/24*Math.PI*2;
+ box(scene,120+Math.cos(a)*19,.12,60+Math.sin(a)*19,.9,.08,.9,mat(0xd8d8d2));
+}
+label('SPORTS COMPLEX',120,3,89,'#fff',1.3);
+box(scene,-60,.2,143,24,.4,10,mat(0xeeeeea));
+label('EMERGENCY',-60,3,149,'#d84c4c',1.1);
+
+/* COURTHOUSE EXTERIOR */
+const courtExterior=new THREE.Group();courtExterior.position.set(court.x,0,court.z);scene.add(courtExterior);
+const stone=mat(0xd9d0bd),columnStone=mat(0xe8dfcd),courtDark=mat(0x483b31);
+for(let i=0;i<7;i++){
+ const x=-15+i*5;
+ box(courtExterior,x,.3,18,4,.6,7,mat(0xc3b9a7));
+ cylinder(courtExterior,x,5.2,15.2,1.05,1.05,9,columnStone,12);
+ cylinder(courtExterior,x,1,15.2,1.45,1.45,.5,stone,12);
+ cylinder(courtExterior,x,9.6,15.2,1.4,1.4,.55,stone,12);
+}
+box(courtExterior,0,10.3,15,38,1.2,2,stone);
+const pediment=new THREE.Mesh(new THREE.ConeGeometry(21,7,4),stone);
+pediment.rotation.y=Math.PI/4;pediment.position.set(0,13.8,15);pediment.scale.set(1,.55,.3);courtExterior.add(pediment);
+for(let i=0;i<5;i++)box(courtExterior,0,.35+i*.42,21,31-i*2,.65,4,mat(0xb9af9d));
+box(courtExterior,0,3.1,18.9,15,.35,.5,mat(0x6b5540));
+label('P.V ASSOCIATES COURT',court.x,19,court.z+18,'#fff0cb',1.5);
+
+/* FORMAL COURTROOM */
+const courtRoom=new THREE.Group();courtRoom.position.set(court.x,0,court.z);court.interior.add(courtRoom);
+const courtWood=mat(0x4a3024),courtPanel=mat(0x684733),courtCarpet=mat(0x6c252b);
+box(courtRoom,0,.32,0,34,.12,28,courtCarpet);
+box(courtRoom,0,.4,0,32,.08,26,mat(0x6f292d));
+for(let x=-16;x<=16;x+=8){
+ box(courtRoom,x,2.1,-15,.22,4,.22,mat(0x493a30));
+ box(courtRoom,x,1,-14.82,3.8,1.9,.18,courtPanel);
+}
+for(let z=-12;z<=13;z+=5){
+ box(courtRoom,-18,2,z,.2,3,.2,mat(0x493a30));
+ box(courtRoom,18,2,z,.2,3,.2,mat(0x493a30));
+}
+for(let i=0;i<6;i++){
+ const x=-14+i*5.6;
+ box(courtRoom,x,7,-15,3.5,.35,.5,courtWood);
+ box(courtRoom,x,5.5,-15,3.5,2.5,.3,courtPanel);
+}
+rug(courtRoom,0,0,27,22,0x70272d);
+for(let i=0;i<3;i++)box(courtRoom,0,.35+i*.42,-10,17-i*1.5,.7,5,mat(0x75624e));
+box(courtRoom,0,2.3,-10,14,1.8,2.1,courtWood);
+box(courtRoom,0,3.25,-11,13,.18,1.8,mat(0x86613e));
+box(courtRoom,0,3.6,-10,12,.25,.22,mats.gold);
+for(const x of [-5,5]){
+ box(courtRoom,x,2.8,-8,.3,1.1,.3,mats.gold);
+ sphere(courtRoom,x,3.5,-8,.42,mat(0x8c6a3f));
+}
+label('HONOURABLE JUDGE',court.x,5,court.z-10,'#f5e4b9',.9);
+box(courtRoom,0,5.3,-15,5,2.8,.25,mat(0x593d2c));
+label('COURT EMBLEM',court.x,7,court.z-15,'#f7e5c0',.7);
+function courtTable(x,z,name){
+ box(courtRoom,x,.85,z,7,1.5,2.3,courtWood);
+ box(courtRoom,x,1.65,z,7.2,.15,2.5,mat(0x9b7650));
+ for(let i=-1;i<=1;i++){
+  chair(courtRoom,x+i*2.1,z+2.2,0x302f36);
+  cylinder(courtRoom,x+i*2.1,2,z-.7,.07,.07,.7,mat(0x24272a));
+  sphere(courtRoom,x+i*2.1,2.4,z-.7,.12,mat(0x161a1e));
+ }
+ label(name,court.x+x,3.2,court.z+z,'#fff',.65);
+}
+courtTable(-9,-2,'PETITIONER / PROSECUTION');
+courtTable(9,-2,'RESPONDENT / DEFENCE');
+box(courtRoom,0,1,5,4,1.5,3,courtWood);
+for(const x of [-2,2])for(const z of [3.5,6.5])box(courtRoom,x,1.3,z,.12,2.2,.12,mats.gold);
+for(let z=3.5;z<=6.5;z+=1)box(courtRoom,0,2.1,z,4,.12,.12,mats.gold);
+box(courtRoom,0,2.2,5,1.6,.12,1.1,mat(0x795538));
+label('WITNESS BOX',court.x,3.4,court.z+5,'#fff',.65);
+box(courtRoom,-14,.75,-9,4,1.4,2,courtWood);
+box(courtRoom,-14,1.5,-9,4.2,.15,2.2,mat(0x99734c));
+chair(courtRoom,-14,-6,0x41464e);
+label('COURT CLERK',court.x-14,2.8,court.z-9,'#fff',.55);
+for(let row=0;row<3;row++){
+ const z=9+row*3;
+ for(let i=0;i<6;i++){
+  const x=-13+i*5;
+  box(courtRoom,x,.65+row*.12,z,3.3,.28,1.1,courtWood);
+  box(courtRoom,x,.95+row*.12,z-.38,3.3,.65,.2,courtPanel);
+  chair(courtRoom,x,z+.35,0x53463b);
+ }
+}
+label('PUBLIC GALLERY',court.x,4,court.z+16,'#fff',.75);
+for(const x of [-12,0,12]){
+ cylinder(courtRoom,x,8,0,.25,.25,.2,mat(0x8a744d));
+}
+box(courtRoom,-17,4,0,.2,4,.2,mat(0x8c754c));
+sphere(courtRoom,-17,6,0,.45,mat(0xeee4ce));
+box(courtRoom,17,4,0,.2,4,.2,mat(0x8c3030));
+sphere(courtRoom,17,6,0,.45,mat(0xeee4ce));
+bookcase(courtRoom,-15,11,3);bookcase(courtRoom,15,11,3);
+box(courtRoom,-14,.6,14,4,1.1,1.2,mat(0x49382d));
+box(courtRoom,14,.6,14,4,1.1,1.2,mat(0x49382d));
+
+/* INTERACTABLE WORKSTATIONS */
+function addInteractable(parent,x,y,z,range,prompt,action){
+ const obj=new THREE.Group();obj.position.set(x,y,z);parent.add(obj);
+ interactives.push({object:obj,range,prompt,action});return obj;
+}
+function addDesk(parent,x,z,name){
+ const desk=addInteractable(parent,x,0,z,3,`[E] Use ${name}`,()=>{
+  if(name==='Advocate table'){courtPanel();return}
+  const wp=desk.getWorldPosition(new THREE.Vector3());
+  player.position.set(wp.x,0,wp.z+2);
+  player.rotation.y=Math.PI;sitting=true;
+  toast(`You are using ${name}. Press E to finish.`);
+ });
+ furniture(desk,0,.7,0,2.6,2,.16,0x68472f);
+ box(desk,0,1.55,-.35,1.4,.12,.8,mat(0x252a30));
+ box(desk,0,1.9,-.35,1.3,.7,.08,mat(0x202b34));
+ box(desk,0,1.93,-.29,1.1,.5,.025,mat(0x4c8da7));
+ furniture(desk,-1.8,.55,.4,.8,1,.8,0x34465b);
+ label(name,parent.position.x+x,3,parent.position.z+z,'#fff',.55);
+}
+for(const b of [mansion,industries,schools,hospitals,associates,veda]){
+ addDesk(b.interior,0,-4,b.id==='mansion'?'Private computer':b.id==='schools'?'Principal desk':b.id==='hospitals'?'Director desk':b.id==='veda'?'Patashala office':b.id==='industries'?'Chairman desk':'Advocate desk');
+}
+addDesk(courtRoom,9,-2,'Advocate table');
+
+/* PEOPLE — reduced background population for smoother performance */
+const npcs=[],skinTones=[0x9b6749,0xb77e5b,0x754b37,0xd19a73],clothes=[0x253b5d,0x7c3838,0x315b49,0x78633e,0x4a506b];
+function makePerson(x,z,role='Resident',isGuard=false,isPlayer=false){
+ const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
+ const skin=mat(isPlayer?0xb77b58:skinTones[Math.floor(Math.random()*skinTones.length)]);
+ const cloth=mat(isPlayer?0x202a3b:isGuard?0x263442:clothes[Math.floor(Math.random()*clothes.length)]);
+ const hair=mat(isPlayer?0x17191d:0x29221e);
+ box(g,0,1.35,0,.72,1.05,.42,cloth);
+ cylinder(g,-.2,.52,0,.13,.16,.9,mat(0x222b35),8);
+ cylinder(g,.2,.52,0,.13,.16,.9,mat(0x222b35),8);
+ sphere(g,0,2.15,0,.38,skin);sphere(g,0,2.42,-.03,.36,hair);
+ sphere(g,-.13,2.18,.31,.045,mat(0x171717));sphere(g,.13,2.18,.31,.045,mat(0x171717));
+ if(isPlayer){
+  box(g,0,1.62,.23,.13,.55,.05,mats.gold);
+  box(g,-.32,1.65,.23,.08,.55,.04,mat(0xf4f0e8));
+  box(g,.32,1.65,.23,.08,.55,.04,mat(0xf4f0e8));
+ }
+ if(isGuard)box(g,.38,1.45,.22,.16,.25,.12,mats.gold);
+ g.userData={role,isGuard,isPlayer};npcs.push(g);return g;
+}
+const player=makePerson(-120,-55,'City Owner',false,true);
+player.position.set(-120,0,-55);
+const guards=[makePerson(-123,-51,'Bodyguard',true),makePerson(-117,-50,'Bodyguard',true)];
+for(let i=0;i<20;i++){
+ let x=(Math.random()-.5)*280,z=(Math.random()-.5)*280;
+ if(roadXs.some(v=>Math.abs(x-v)<8)||roadZs.some(v=>Math.abs(z-v)<8))continue;
+ makePerson(x,z,i%5===0?'Teacher':i%7===0?'Doctor':'Resident');
+}
+for(let i=0;i<10;i++)makePerson(105+Math.random()*28,48+Math.random()*24,'Student');
+
+/* CHAUFFEUR LIMOUSINE */
+const car=new THREE.Group();scene.add(car);
+const carBody=mat(0x111b29,.27,.65),chrome=mat(0xb9c4ca,.25,.8),rubber=mat(0x111315,.95);
+box(car,0,1,0,2.35,1.25,6.1,carBody);
+box(car,0,1.85,-.15,2.05,.9,3.65,mats.darkGlass);
+box(car,0,1.48,2.75,2.3,.42,.55,carBody);
+box(car,0,1.48,-2.75,2.3,.42,.55,carBody);
+box(car,0,1.67,3.06,1.65,.22,.08,chrome);
+box(car,0,1.67,-3.06,1.65,.22,.08,chrome);
+for(const x of [-.78,.78]){
+ box(car,x,1.95,0,.07,.95,3.7,chrome);
+ for(const z of [-1.15,1.15])box(car,x,1.85,z,.1,.9,.07,chrome);
+}
+for(const x of [-.92,.92])for(const z of [-2,2]){
+ const wheel=new THREE.Group();wheel.position.set(x,.48,z);car.add(wheel);
+ cylinder(wheel,0,0,0,.53,.53,.28,rubber,12).rotation.z=Math.PI/2;
+ cylinder(wheel,0,0,0,.24,.24,.3,chrome,12).rotation.z=Math.PI/2;
+ car.userData.wheels??=[];car.userData.wheels.push(wheel);
+}
+for(const x of [-.72,.72]){
+ box(car,x,1.35,3.08,.38,.25,.08,mat(0xfff1cf,.3));
+ box(car,x,1.25,-3.08,.38,.2,.08,mat(0xa52d2d,.3));
+}
+box(car,0,2.34,-.15,1.8,.08,3.2,mat(0x101923));
+const driver=makePerson(0,0,'Chauffeur');driver.scale.set(.42,.48,.42);driver.position.set(0,.62,-.5);driver.userData.isVehicleCrew=true;car.add(driver);
+car.position.set(-120,0,-48);
+
+/* ROAD ROUTING */
+const graph=new Map();
+function nodeKey(x,z){return `${x},${z}`}
+for(const x of roadXs)for(const z of roadZs)graph.set(nodeKey(x,z),{x,z,edges:[]});
+for(const x of roadXs)for(const z of roadZs){
+ const n=graph.get(nodeKey(x,z));
+ for(const [dx,dz] of [[60,0],[-60,0],[0,60],[0,-60]]){
+  const k=nodeKey(x+dx,z+dz);if(graph.has(k))n.edges.push(k);
+ }
+}
+function nearestNode(pos){
+ let best=null,dist=Infinity;
+ for(const n of graph.values()){
+  const d=Math.hypot(n.x-pos.x,n.z-pos.z);
+  if(d<dist){dist=d;best=n}
+ }
+ return best;
+}
+function routeBetween(a,b){
+ const s=nearestNode(a),e=nearestNode(b);
+ if(!s||!e)return [a,b];
+ const dist=new Map(),prev=new Map(),open=new Set([nodeKey(s.x,s.z)]);
+ for(const k of graph.keys())dist.set(k,Infinity);
+ dist.set(nodeKey(s.x,s.z),0);
+ while(open.size){
+  let u=null,ud=Infinity;
+  for(const k of open)if(dist.get(k)<ud){u=k;ud=dist.get(k)}
+  if(!u)break;open.delete(u);if(u===nodeKey(e.x,e.z))break;
+  for(const v of graph.get(u).edges){
+   const nd=ud+60;if(nd<dist.get(v)){dist.set(v,nd);prev.set(v,u);open.add(v)}
+  }
+ }
+ let path=[],k=nodeKey(e.x,e.z);path.push(graph.get(k));
+ while(prev.has(k)){k=prev.get(k);path.push(graph.get(k))}
+ path.reverse();
+ const roadPath=path.map(n=>new THREE.Vector3(n.x,0,n.z));
+ return [new THREE.Vector3(a.x,0,a.z),...roadPath,new THREE.Vector3(b.x,0,e.z),new THREE.Vector3(b.x,0,b.z)];
+}
+let carPath=[],carTarget=null,carMode='parked',carIndex=0,carSpeed=13;
+let carHeading=0;
+function startCarTo(id){
+ const b=buildings[id];if(!b)return;
+ carTarget=id;
+ if(carMode==='away'){car.position.set(150,0,150);car.visible=true}
+ carPath=routeBetween(car.position,b.entrance);carIndex=1;carMode='driving';
+ toast(`Chauffeur is driving to ${b.name}.`);
+}
+function sendCarAway(){
+ if(carMode==='away'||carMode==='leaving')return;
+ const away=new THREE.Vector3(150,0,150);
+ carPath=routeBetween(car.position,away);carIndex=1;carMode='leaving';
+ toast('Your chauffeur is taking the car away.');
+}
+
+/* CITY OWNER PANEL */
+let cityLevel=1;
+function cityPanel(){
+ showPanel('City Owner',`You own this city. Current development level: ${cityLevel}. Improve public spaces and expand services.`,[
+ ['Improve roads',()=>{cityLevel++;toast('Road network upgraded. City level '+cityLevel)}],
+ ['Add city park',()=>{park(-30,-120,28,25,'NEW CITY PARK');toast('A new public park has been added.')}],
+ ['Expand street lighting',()=>{
+  for(let i=0;i<4;i++){
+   const x=-150+i*90;
+   box(scene,x,3,0,.14,6,.14,mat(0x51575d));
+   box(scene,x,5,0,.3,.12,.3,mat(0xffe7bb));
+  }
+  toast('Street lighting expanded.');
+ }],
+ ['Close',hidePanel]
+ ]);
+}
+
+/* FICTIONAL COURT CASE SYSTEM */
+const cases=[
+ {title:'Case 001 — Water Supply Society',summary:'A fictional dispute concerning interrupted water supply and civic responsibility.'},
+ {title:'Case 002/2026 — Medical Negligence',summary:'A fictional medical negligence matter involving P.V. Hospitals.'},
+ {title:'Case 003/2026 — The Inherited Law Dispute',summary:'A fictional dispute about colonial-era land access restrictions after Independence.'}
+];
+let activeCase=0,hearingStep=0;
+function courtPanel(){
+ const c=cases[activeCase];
+ showPanel('P.V Associates Court',`<b>${c.title}</b><br>${c.summary}<br><br>Hearing stage: ${['Not started','Opening submissions','Evidence and witness questions','Opposing advocate','Judge’s decision'][hearingStep]}`,[
+ ['Choose case',()=>showPanel('Select a fictional case',cases.map(v=>v.title).join('<br>'),cases.map((v,i)=>[v.title,()=>{activeCase=i;hearingStep=0;courtPanel()}]).concat([['Close',hidePanel]]))],
+ ['Call case for hearing',()=>{hearingStep=1;toast('The court is now in session.');courtPanel()}],
+ ['Present arguments',()=>{if(hearingStep<1){toast('Call the case first.');return}hearingStep=2;toast('Your opening submissions have been recorded.');courtPanel()}],
+ ['Question witness',()=>{if(hearingStep<2){toast('Present your opening submissions first.');return}hearingStep=3;toast('Witness questioning completed.');courtPanel()}],
+ ['Hear opposing advocate',()=>{if(hearingStep<3){toast('Complete witness questioning first.');return}hearingStep=4;toast('The opposing advocate has presented submissions.');courtPanel()}],
+ ['Judge gives decision',()=>{if(hearingStep<4){toast('The hearing is not ready for a decision.');return}toast('The judge has reserved the fictional decision.');hearingStep=0;hidePanel()}],
+ ['Close',hidePanel]
+ ]);
+}
+
+/* UI HELPERS */
+const panel=document.getElementById('panel'),promptEl=document.getElementById('prompt'),toastEl=document.getElementById('toast');
+let toastTimer;
+function toast(s){toastEl.textContent=s;toastEl.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.style.display='none',2600)}
+function showPanel(title,html,actions=[]){
+ panel.style.display='block';
+ panel.innerHTML=`<button class="close" id="panelClose">✕</button><h2>${title}</h2><p>${html}</p><div class="actions" id="panelActions"></div>`;
+ panel.querySelector('#panelClose').onclick=hidePanel;
+ const boxEl=panel.querySelector('#panelActions');
+ for(const [name,fn] of actions){const b=document.createElement('button');b.textContent=name;b.onclick=fn;boxEl.appendChild(b)}
+}
+function hidePanel(){panel.style.display='none'}
+function guardPanel(){
+ showPanel('Security Command',`Your security team currently has ${guards.length} guards.`,[
+ ['Follow Me',()=>{guardMode='follow';toast('Bodyguards are following you.');hidePanel()}],
+ ['Stay Here',()=>{guardMode='stay';toast('Bodyguards will remain here.');hidePanel()}],
+ ['Dismiss All Bodyguards',()=>{guardMode='dismiss';toast('Bodyguards are returning to the security office.');hidePanel()}],
+ ['Call Bodyguards',()=>{guardMode='call';toast('Your bodyguards are coming to you.');hidePanel()}],
+ ['Return to Security Office',()=>{guardMode='office';toast('Bodyguards are returning to the security office.');hidePanel()}]
+ ]);
+}
+function buildingPanel(id){
+ const b=buildings[id];if(id==='court'){courtPanel();return}
+ showPanel(b.name,`You are at ${b.name}. Explore the rooms and interact with its workstations.`,[
+ ['Enter building',()=>{player.position.copy(b.entrance);player.position.z-=2;hidePanel();toast(`Welcome to ${b.name}.`)}],
+ ['Property improvements',()=>{cityLevel++;toast(`${b.name} upgraded. Development level ${cityLevel}`)}],
+ ['Close',hidePanel]
+ ]);
+}
+
+/* PLAYER AND CAMERA */
+const keys={};let yaw=0,pitch=.22,cameraMode=2,mouseDown=false,lastMouseX=0,lastMouseY=0;
+let guardMode='follow',inCar=false,sitting=false,insideBuilding=null,activeInteractive=null,speed=8.5;
+window.addEventListener('keydown',e=>{
+ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
+ keys[e.key.toLowerCase()]=true;if(e.repeat)return;
+ const k=e.key.toLowerCase();
+ if(k==='v'){cameraMode=cameraMode===2?1:2;document.getElementById('cameraBtn').textContent='Camera: '+(cameraMode===2?'Third Person':'First Person')}
+ if(k==='c')callCar();if(k==='f')toggleCar();if(k==='g')startCarTo(document.getElementById('destination').value);
+ if(k==='e'||k==='o'){if(sitting){sitting=false;toast('You stood up.')}else interact()}
+});
+window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+renderer.domElement.addEventListener('pointerdown',e=>{mouseDown=true;lastMouseX=e.clientX;lastMouseY=e.clientY});
+window.addEventListener('pointerup',()=>mouseDown=false);
+window.addEventListener('pointermove',e=>{
+ if(!mouseDown)return;
+ const dx=e.clientX-lastMouseX,dy=e.clientY-lastMouseY;lastMouseX=e.clientX;lastMouseY=e.clientY;
+ yaw-=dx*.004;pitch=THREE.MathUtils.clamp(pitch+dy*.002,-.25,.8);
+});
+function callCar(){
+ if(carMode==='away'||carMode==='leaving'){car.position.set(150,0,150);car.visible=true;carMode='parked'}
+ startCarTo(insideBuilding||'mansion');
+}
+function toggleCar(){
+ if(inCar){inCar=false;player.visible=true;player.position.set(car.position.x+3,0,car.position.z);toast('You stepped out of the limousine.');return}
+ if(Math.hypot(player.position.x-car.position.x,player.position.z-car.position.z)<5&&carMode==='parked'){
+  inCar=true;player.visible=false;toast('You are travelling as a passenger.');
+ }else toast('Move closer to your limousine to enter.');
+}
+function findNearest(){
+ let best=null,bd=999;
+ for(const door of doors){
+  const p=door.pivot.getWorldPosition(new THREE.Vector3()),d=Math.hypot(player.position.x-p.x,player.position.z-p.z);
+  if(d<5&&d<bd){bd=d;best=interactives.find(it=>it.door===door)}
+ }
+ if(best)return best;
+ for(const it of interactives){
+  const p=it.object.getWorldPosition(new THREE.Vector3()),d=Math.hypot(player.position.x-p.x,player.position.z-p.z);
+  if(d<it.range&&d<bd){bd=d;best=it}
+ }
+ return best;
+}
+function interact(){
+ if(activeInteractive){activeInteractive.action();return}
+ const near=findNearest();if(near){near.action();return}
+ toast('Nothing nearby to interact with. Move closer to a door, desk or building entrance.');
+}
+function collides(x,z){
+ for(const b of Object.values(buildings)){
+  const lx=x-b.x,lz=z-b.z;
+  if(Math.abs(lx)<b.w/2+.7&&Math.abs(lz)<b.d/2+.7){
+   if(lz>b.d/2-2.5&&Math.abs(lx)<2.8)return false;
+   if(Math.abs(lx)<b.w/2-.8&&Math.abs(lz)<b.d/2-.8)return false;
+   return true;
+  }
+ }
+ return false;
+}
+function moveToward(obj,target,dt,run=6){
+ const dx=target.x-obj.position.x,dz=target.z-obj.position.z,dist=Math.hypot(dx,dz);
+ if(dist>.7){const step=Math.min(dist,run*dt);obj.position.x+=dx/dist*step;obj.position.z+=dz/dist*step;obj.rotation.y=Math.atan2(dx,dz)}
+}
+function updateGuards(dt){
+ if(guardMode==='dismiss'||guardMode==='office'){guards.forEach((g,i)=>moveToward(g,new THREE.Vector3(-150,0,150+i*3),dt,5));return}
+ if(guardMode==='stay')return;
+ guards.forEach((g,i)=>{
+  const back=new THREE.Vector3(-Math.sin(yaw)*(4+i*2),0,-Math.cos(yaw)*(4+i*2));
+  const target=player.position.clone().add(back);
+  if(g.position.distanceTo(target)>2.2)moveToward(g,target,dt,6);
+ });
+}
+function updatePlayer(dt){
+ if(inCar||sitting)return;
+ let dx=0,dz=0;
+ if(keys.arrowup||keys.w)dz-=1;if(keys.arrowdown||keys.s)dz+=1;
+ if(keys.arrowleft||keys.a)dx-=1;if(keys.arrowright||keys.d)dx+=1;
+ document.querySelectorAll('#mobilePad button').forEach(btn=>{
+  if(btn.dataset.pressed){if(btn.dataset.dir==='up')dz--;if(btn.dataset.dir==='down')dz++;if(btn.dataset.dir==='left')dx--;if(btn.dataset.dir==='right')dx++}
+ });
+ const len=Math.hypot(dx,dz);if(!len)return;
+ dx/=len;dz/=len;
+ const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+ const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+ const move=forward.multiplyScalar(-dz).add(right.multiplyScalar(dx));
+ const v=speed*(keys.shift?1.55:1);
+ const nx=player.position.x+move.x*v*dt,nz=player.position.z+move.z*v*dt;
+ if(!collides(nx,player.position.z))player.position.x=nx;
+ if(!collides(player.position.x,nz))player.position.z=nz;
+ player.rotation.y=Math.atan2(move.x,move.z);
+}
+document.querySelectorAll('#mobilePad button').forEach(btn=>{
+ btn.addEventListener('pointerdown',e=>{e.preventDefault();btn.dataset.pressed='1'});
+ ['pointerup','pointerleave','pointercancel'].forEach(ev=>btn.addEventListener(ev,()=>delete btn.dataset.pressed));
+});
+
+/* CHAUFFEUR CAR MOVEMENT */
+function angleDifference(a,b){return Math.atan2(Math.sin(b-a),Math.cos(b-a))}
+function updateCar(dt){
+ if(carMode!=='driving'&&carMode!=='leaving')return;
+ if(carIndex>=carPath.length){
+  if(carMode==='leaving'){carMode='away';car.visible=false;toast('Your limousine has left.')}
+  else{carMode='parked';toast(`Your chauffeur has arrived at ${buildings[carTarget]?.name||'your destination'}.`)}
+  return;
+ }
+ const target=carPath[carIndex];
+ const dx=target.x-car.position.x,dz=target.z-car.position.z;
+ const dist=Math.hypot(dx,dz);
+ if(dist<2.2){carIndex++;return}
+ const desired=Math.atan2(dx,dz),turn=angleDifference(carHeading,desired);
+ carHeading+=THREE.MathUtils.clamp(turn,-dt*1.9,dt*1.9);
+ car.rotation.y=carHeading;
+ const alignment=Math.max(.25,Math.cos(turn));
+ const step=Math.min(dist,carSpeed*alignment*dt);
+ car.position.x+=Math.sin(carHeading)*step;
+ car.position.z+=Math.cos(carHeading)*step;
+ if(car.userData.wheels)for(const wheel of car.userData.wheels)wheel.rotation.x-=step/.53;
+}
+
+/* CAMERA AND PROMPTS */
+function updateInside(){
+ insideBuilding=null;
+ for(const [id,b] of Object.entries(buildings)){
+  if(Math.abs(player.position.x-b.x)<b.w/2&&Math.abs(player.position.z-b.z)<b.d/2){insideBuilding=id;break}
+ }
+ for(const b of Object.values(buildings))b.roof.visible=b.id!==insideBuilding;
+}
+function updateCamera(){
+ const target=player.position.clone().add(new THREE.Vector3(0,1.7,0));
+ if(inCar)target.copy(car.position).add(new THREE.Vector3(0,2,0));
+ if(cameraMode===1){
+  camera.position.copy(target);
+  const dir=new THREE.Vector3(-Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch));
+  camera.lookAt(target.clone().add(dir.multiplyScalar(10)));
+ }else{
+  const offset=new THREE.Vector3(Math.sin(yaw)*9,3.8+pitch*3,Math.cos(yaw)*9);
+  camera.position.copy(target).add(offset);camera.lookAt(target);
+ }
+}
+function updatePrompt(){
+ activeInteractive=findNearest();
+ if(activeInteractive){
+  promptEl.textContent=typeof activeInteractive.prompt==='function'?activeInteractive.prompt():activeInteractive.prompt;
+  promptEl.style.display='block';
+ }else promptEl.style.display='none';
+}
+
+/* TRAFFIC — fewer moving vehicles */
+const traffic=[];
+for(let i=0;i<4;i++){
+ const v=new THREE.Group();
+ box(v,0,.75,0,3.6,.9,1.8,mat([0x9c3434,0x344e75,0x777777,0xd0b35a][i]));
+ for(const x of [-1.1,1.1])for(const z of [-.7,.7])cylinder(v,x,.35,z,.32,.32,.2,mat(0x111111),8).rotation.z=Math.PI/2;
+ v.position.set(-150+i*90,0,-30+(i%2)*4);scene.add(v);traffic.push(v);
+}
+function animateNPCs(dt,t){
+ npcs.forEach((n,i)=>{
+  if(n.userData.isPlayer||n.userData.isGuard||n.userData.isVehicleCrew)return;
+  const phase=t*.22+i*1.71;
+  n.position.x+=Math.sin(phase)*dt*.35;n.position.z+=Math.cos(phase)*dt*.35;
+ });
+}
+
+/* BUTTONS */
+document.getElementById('startBtn').addEventListener('click',()=>{
+ if(window.__pvCityReady){toast('Welcome, City Owner. Your city is ready to explore.');updateCamera()}
+});
+document.getElementById('cameraBtn').onclick=()=>{
+ cameraMode=cameraMode===2?1:2;
+ document.getElementById('cameraBtn').textContent='Camera: '+(cameraMode===2?'Third Person':'First Person');
+};
+document.getElementById('callCar').onclick=callCar;
+document.getElementById('sendCar').onclick=sendCarAway;
+document.getElementById('travelBtn').onclick=()=>{
+ if(inCar)startCarTo(document.getElementById('destination').value);
+ else if(Math.hypot(player.position.x-car.position.x,player.position.z-car.position.z)<5&&carMode==='parked')toast('Press F or Enter / Exit Car to board before travelling.');
+ else callCar();
+};
+document.getElementById('carBtn').onclick=toggleCar;
+document.getElementById('guardBtn').onclick=guardPanel;
+document.getElementById('cityBtn').onclick=cityPanel;
+document.getElementById('fullBtn').onclick=()=>{
+ if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();
+};
+
+/* STARTUP */
+player.position.set(mansion.x,0,mansion.z+5);
+camera.position.set(mansion.x+9,5,mansion.z+12);
+const clock=new THREE.Clock();let elapsed=0;
+function loop(){
+ requestAnimationFrame(loop);
+ const dt=Math.min(clock.getDelta(),.04);elapsed+=dt;
+ updatePlayer(dt);updateGuards(dt);updateCar(dt);updateInside();updateCamera();updatePrompt();animateNPCs(dt,elapsed);
+ traffic.forEach((v,i)=>{
+  v.position.x+=dt*(i%2?7:-6);
+  if(v.position.x>165)v.position.x=-165;
+  if(v.position.x< -165)v.position.x=165;
+ });
+ document.getElementById('status').textContent=`City Level ${cityLevel} · ${insideBuilding?buildings[insideBuilding].name:'City Streets'} · ${carMode==='away'?'Car away':carMode==='driving'?'Car travelling':'Car '+carMode}`;
+ renderer.render(scene,camera);
+}
+loop();
+window.__pvCityReady=true;
+document.getElementById('footerNote').textContent='Optimised Build 09 · 3D city ready';
+window.addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
+
